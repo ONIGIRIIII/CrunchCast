@@ -1,0 +1,40 @@
+{
+  "feature_cols": [
+    "hist_course_mean_difficulty",
+    "hist_course_offerings_count",
+    "hist_course_mean_enrolled",
+    "hist_subject_mean_difficulty",
+    "hist_subject_offerings_count",
+    "hist_professor_mean_difficulty",
+    "hist_professor_offerings_count",
+    "global_running_mean_difficulty",
+    "credits",
+    "subject",
+    "course_level",
+    "session"
+  ],
+  "categorical_feature_cols": [
+    "subject",
+    "course_level",
+    "session"
+  ],
+  "label_col": "difficulty_score",
+  "lgb_params": {
+    "objective": "regression",
+    "metric": "mae",
+    "num_leaves": 31,
+    "learning_rate": 0.05,
+    "min_child_samples": 20,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 1,
+    "verbose": -1
+  },
+  "best_iteration": 223,
+  "eval_test_cutoff_session_order": 4027,
+  "eval_inner_train_cutoff_session_order": 4023,
+  "n_train_rows_eval_model": 99483,
+  "n_train_rows_final_model": 118507,
+  "global_mean_difficulty": 50.00042191600496,
+  "note": "final_model (lightgbm_model.txt) is trained on ALL rows and is what the API serves. Evaluation metrics in model/reports/evaluation_report.md come from eval_model, trained only on pre-2014 data, so they are a lower-bound estimate of the shipped model's quality, not a live score for it (the shipped model can never be evaluated out-of-time, since there is no post-2016 reliable data)."
+}
