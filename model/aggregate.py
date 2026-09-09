@@ -33,7 +33,9 @@ def aggregate_term(course_predictions: list[dict]) -> dict:
         1 for c in course_predictions if c["difficulty_score"] >= HIGH_DIFFICULTY_THRESHOLD
     )
     low_confidence_courses = [
-        c["course"] for c in course_predictions if c["confidence"] in LOW_CONFIDENCE_LEVELS
+        f"{c['subject']} {c['course']}"
+        for c in course_predictions
+        if c["confidence"] in LOW_CONFIDENCE_LEVELS
     ]
 
     return {
