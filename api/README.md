@@ -1,0 +1,39 @@
+# API
+
+FastAPI service that wraps the trained model (`model/predict.py`,
+`model/aggregate.py`) in a `/predict` endpoint.
+
+## Run locally
+
+From the repo root, with the venv set up and `model/train.py` already run
+at least once (see `../model` artifacts):
+
+```
+.venv/Scripts/python -m uvicorn main:app --reload --port 8000
+```
+
+(run from inside `api/`, or add `--app-dir api` if running from the repo
+root). Docs at `http://127.0.0.1:8000/docs`.
+
+## Endpoints
+
+- `GET /health` - liveness check.
+- `POST /predict` - body: `{"courses": [{"subject": "CPSC", "course": "110", "session": "W"}, ...]}`
+  (1-8 courses, `session` optional, defaults to `"W"`). Returns per-course
+  difficulty plus a credit-weighted term-level score. See `schemas.py` for
+  the full response shape.
+
+## Config
+
+- `API_CORS_ORIGINS`: comma-separated list of allowed frontend origins.
+  Defaults to `*` (fine for local dev); set this to the deployed frontend
+  URL in production (see the root README's deployment section).
+
+## Notes
+
+- The model is loaded once at process startup (FastAPI lifespan handler in
+  `main.py`), not per-request.
+- `model_service.py` is the only file that knows about `model/`'s internal
+  layout; `main.py` and `schemas.py` only talk to it, so the model package
+  could be swapped or versioned independently of the API layer.
+- Tests: `pytest api/tests` (from the repo root, with the venv active).
