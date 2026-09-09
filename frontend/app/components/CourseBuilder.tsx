@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ApiError, predictTerm, type CourseInput, type PredictResponse, type Session } from "@/lib/api";
 import TermResults from "./TermResults";
+import CourseNavSidebar from "./CourseNavSidebar";
 
 const MAX_COURSES = 8;
 
@@ -16,15 +17,26 @@ export default function CourseBuilder() {
   const [result, setResult] = useState<PredictResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const addedKeys = useMemo(
+    () => new Set(courses.map((c) => `${c.subject}-${c.course}`)),
+    [courses]
+  );
+
+  function addCourseIfNew(subject: string, course: string, session: Session) {
+    if (!subject || !course) return;
+    if (courses.length >= MAX_COURSES) return;
+    if (addedKeys.has(`${subject}-${course}`)) return;
+    setCourses([...courses, { subject, course, session }]);
+    setResult(null);
+  }
 
   function addCourse() {
     const subject = draft.subject.trim().toUpperCase();
     const course = draft.course.trim().toUpperCase();
-    if (!subject || !course) return;
-    if (courses.length >= MAX_COURSES) return;
-    setCourses([...courses, { subject, course, session: draft.session }]);
+    addCourseIfNew(subject, course, draft.session);
     setDraft(emptyDraft());
-    setResult(null);
   }
 
   function removeCourse(index: number) {
@@ -48,8 +60,22 @@ export default function CourseBuilder() {
 
   return (
     <div className="flex flex-col gap-8">
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className="fixed top-4 left-4 z-40 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm font-medium shadow-sm flex items-center gap-2"
+      >
+        <span aria-hidden>☰</span> Courses
+      </button>
+
+      <CourseNavSidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onSelectCourse={(subject, course) => addCourseIfNew(subject, course, "W")}
+        addedKeys={addedKeys}
+      />
+
       <section className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-5">
-        <h2 className="text-sm font-semibold mb-3">Add a course</h2>
+        <h2 className="text-sm font-semibold mb-3">Or add a course by typing</h2>
         <form
           className="flex flex-wrap items-end gap-3"
           onSubmit={(e) => {

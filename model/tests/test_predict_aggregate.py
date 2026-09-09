@@ -20,6 +20,13 @@ def test_known_course_predicts_in_range(predictor):
     assert result["historical_offerings_count"] > 0
 
 
+def test_list_catalog_includes_known_course(predictor):
+    catalog = predictor.list_catalog()
+    assert "CPSC" in catalog
+    assert "110" in catalog["CPSC"]
+    assert catalog == dict(sorted(catalog.items()))  # subjects alphabetical
+
+
 def test_unknown_course_falls_back_gracefully(predictor):
     result = predictor.predict_one("ZZZZ", "999")
     assert 0.0 <= result["difficulty_score"] <= 100.0

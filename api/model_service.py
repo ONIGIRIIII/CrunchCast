@@ -21,6 +21,10 @@ def get_predictor() -> CourseDifficultyPredictor:
     return CourseDifficultyPredictor()
 
 
+def get_catalog() -> dict[str, list[str]]:
+    return get_predictor().list_catalog()
+
+
 def predict_term(course_requests) -> dict:
     """course_requests: iterable of objects with .subject, .course, .session
     (schemas.CourseRequest instances)."""

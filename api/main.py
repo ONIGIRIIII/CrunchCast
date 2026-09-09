@@ -13,8 +13,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from model_service import get_predictor, predict_term
-from schemas import PredictRequest, PredictResponse
+from model_service import get_catalog, get_predictor, predict_term
+from schemas import CourseCatalogResponse, PredictRequest, PredictResponse
 
 
 @asynccontextmanager
@@ -51,6 +51,14 @@ app.add_middleware(
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/courses", response_model=CourseCatalogResponse)
+def courses():
+    """Subjects and course numbers we have historical data for, for a
+    browse-by-subject UI. Not an authoritative course catalog - see
+    data/README.md for what this data source is and isn't."""
+    return {"subjects": get_catalog()}
 
 
 @app.post("/predict", response_model=PredictResponse)

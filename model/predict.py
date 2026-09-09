@@ -100,6 +100,20 @@ class CourseDifficultyPredictor:
             "_known_subject": subject_row is not None,
         }
 
+    def list_catalog(self) -> dict[str, list[str]]:
+        """All (subject, course) pairs we have historical data for, grouped
+        by subject and sorted by course number. Used to populate a
+        browse-by-subject UI rather than requiring free-text entry."""
+
+        def course_sort_key(course: str):
+            digits = "".join(ch for ch in course if ch.isdigit())
+            return (int(digits) if digits else 0, course)
+
+        catalog: dict[str, list[str]] = {}
+        for subject, group in self.course_stats.groupby("subject"):
+            catalog[subject] = sorted(group["course"].tolist(), key=course_sort_key)
+        return dict(sorted(catalog.items()))
+
     def predict_one(self, subject: str, course: str, session: str = "W") -> dict:
         row = self.build_feature_row(subject, course, session)
         feature_frame = pd.DataFrame([row])[FEATURE_COLS]

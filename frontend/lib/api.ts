@@ -35,6 +35,15 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {}
 
+export async function getCourseCatalog(): Promise<Record<string, string[]>> {
+  const response = await fetch(`${API_URL}/courses`);
+  if (!response.ok) {
+    throw new ApiError(`Failed to load course catalog (${response.status})`);
+  }
+  const body: { subjects: Record<string, string[]> } = await response.json();
+  return body.subjects;
+}
+
 export async function predictTerm(courses: CourseInput[]): Promise<PredictResponse> {
   const response = await fetch(`${API_URL}/predict`, {
     method: "POST",

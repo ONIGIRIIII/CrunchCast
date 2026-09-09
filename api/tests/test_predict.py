@@ -16,6 +16,14 @@ def test_health():
     assert response.json() == {"status": "ok"}
 
 
+def test_courses_catalog():
+    response = client.get("/courses")
+    assert response.status_code == 200
+    subjects = response.json()["subjects"]
+    assert "CPSC" in subjects
+    assert "110" in subjects["CPSC"]
+
+
 def test_predict_known_courses():
     response = client.post(
         "/predict",

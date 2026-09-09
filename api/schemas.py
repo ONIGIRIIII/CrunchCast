@@ -38,6 +38,12 @@ class HardestCourse(BaseModel):
     difficulty_score: float
 
 
+class CourseCatalogResponse(BaseModel):
+    subjects: dict[str, list[str]] = Field(
+        ..., description="Subject code -> sorted list of course numbers we have historical data for"
+    )
+
+
 class PredictResponse(BaseModel):
     term_difficulty_score: float = Field(..., description="Credit-weighted average across all requested courses")
     total_credits: int
