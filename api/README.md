@@ -28,8 +28,13 @@ root). Docs at `http://127.0.0.1:8000/docs`.
   sum to 1) - when present, every course/term response also includes a
   `personalized_score` / `term_personalized_score`, a weighted combination
   of four real historical signals (not a retrained model - see
-  `model/predict.py`'s module docstring). See `schemas.py` for the full
-  request/response shape.
+  `model/predict.py`'s module docstring). Every course also always includes
+  `explanation`: the same four signals (grade impact, fail risk, grading
+  unpredictability, class size), each as a 0-100 score plus a plain-English
+  detail string (e.g. "12% of students historically fail") - this is what
+  the frontend's per-course bar chart renders, and it explains the
+  objective `difficulty_score` too, not just a personalized one. See
+  `schemas.py` for the full request/response shape.
 
 ## Config
 

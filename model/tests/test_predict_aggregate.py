@@ -20,6 +20,30 @@ def test_known_course_predicts_in_range(predictor):
     assert result["historical_offerings_count"] > 0
 
 
+def test_explanation_has_four_components_with_scores_and_details(predictor):
+    result = predictor.predict_one("CPSC", "110")
+    explanation = result["explanation"]
+    assert {e["key"] for e in explanation} == {"grade", "failrisk", "variance", "classsize"}
+    for e in explanation:
+        assert 0.0 <= e["score"] <= 100.0
+        assert isinstance(e["label"], str) and e["label"]
+        assert isinstance(e["detail"], str) and e["detail"]
+
+
+def test_explanation_present_even_without_weights(predictor):
+    result = predictor.predict_one("MATH", "100")
+    assert "explanation" in result
+    assert len(result["explanation"]) == 4
+
+
+def test_explanation_falls_back_gracefully_for_unknown_course(predictor):
+    result = predictor.predict_one("ZZZZ", "888")
+    explanation = result["explanation"]
+    assert len(explanation) == 4
+    for e in explanation:
+        assert 0.0 <= e["score"] <= 100.0
+
+
 def test_list_catalog_includes_known_course(predictor):
     catalog = predictor.list_catalog()
     assert "CPSC" in catalog

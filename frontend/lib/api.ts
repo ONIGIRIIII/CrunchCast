@@ -15,6 +15,15 @@ export interface Weights {
   classsize: number;
 }
 
+export type ExplanationKey = "grade" | "failrisk" | "variance" | "classsize";
+
+export interface ExplanationComponent {
+  key: ExplanationKey;
+  label: string;
+  score: number;
+  detail: string;
+}
+
 export interface CoursePrediction {
   subject: string;
   course: string;
@@ -23,6 +32,7 @@ export interface CoursePrediction {
   confidence: Confidence;
   historical_offerings_count: number;
   credits: number;
+  explanation: ExplanationComponent[];
 }
 
 export interface PredictResponse {

@@ -1,6 +1,7 @@
 import type { PredictResponse } from "@/lib/api";
 import DifficultyBadge from "./DifficultyBadge";
 import ConfidenceNote from "./ConfidenceNote";
+import ExplanationChart from "./ExplanationChart";
 
 export default function TermResults({ result }: { result: PredictResponse }) {
   const personalized = result.term_personalized_score;
@@ -47,22 +48,28 @@ export default function TermResults({ result }: { result: PredictResponse }) {
         )}
       </div>
 
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 divide-y divide-neutral-200 dark:divide-neutral-800">
+      <div className="flex flex-col gap-4">
         {result.courses.map((c) => (
-          <div key={`${c.subject}-${c.course}`} className="flex items-center justify-between gap-4 p-4">
-            <div>
-              <p className="font-medium">
-                {c.subject} {c.course}
-              </p>
-              <ConfidenceNote confidence={c.confidence} />
+          <div
+            key={`${c.subject}-${c.course}`}
+            className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4"
+          >
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div>
+                <p className="font-medium">
+                  {c.subject} {c.course}
+                </p>
+                <ConfidenceNote confidence={c.confidence} />
+              </div>
+              <div className="flex items-center gap-3 text-sm text-neutral-500">
+                <span>{c.credits} cr</span>
+                {c.personalized_score != null && (
+                  <span className="text-xs text-neutral-400">objective {c.difficulty_score.toFixed(0)}</span>
+                )}
+                <DifficultyBadge score={c.personalized_score ?? c.difficulty_score} />
+              </div>
             </div>
-            <div className="flex items-center gap-3 text-sm text-neutral-500">
-              <span>{c.credits} cr</span>
-              {c.personalized_score != null && (
-                <span className="text-xs text-neutral-400">objective {c.difficulty_score.toFixed(0)}</span>
-              )}
-              <DifficultyBadge score={c.personalized_score ?? c.difficulty_score} />
-            </div>
+            <ExplanationChart explanation={c.explanation} />
           </div>
         ))}
       </div>

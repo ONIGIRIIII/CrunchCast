@@ -16,6 +16,11 @@ LABEL_COL = "difficulty_score"
 # already back live inference's historical fallback chain.
 COMPONENT_SCORE_COLS = ["grade_score", "failrisk_score", "variance_score", "classsize_score"]
 
+# Raw (non-percentile) numbers behind the component scores above, aggregated
+# into the same full-history lookup tables purely so the API can explain a
+# score in human terms ("~68% average grade") instead of just "grade_score: 82".
+RAW_EXPLANATION_COLS = ["avg", "fail_rate", "std_dev"]
+
 # Columns the model is actually allowed to train on. Every one of these must
 # be computable before a future offering happens (see build_features.py for
 # how the historical/rolling ones are computed without leaking future data).

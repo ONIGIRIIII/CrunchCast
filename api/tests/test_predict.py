@@ -42,6 +42,15 @@ def test_predict_rejects_empty_course_list():
     assert response.status_code == 422
 
 
+def test_predict_response_includes_explanation():
+    response = client.post("/predict", json={"courses": [{"subject": "CPSC", "course": "110"}]})
+    explanation = response.json()["courses"][0]["explanation"]
+    assert {e["key"] for e in explanation} == {"grade", "failrisk", "variance", "classsize"}
+    for e in explanation:
+        assert 0.0 <= e["score"] <= 100.0
+        assert e["detail"]
+
+
 def test_predict_rejects_more_than_five_courses():
     courses = [{"subject": "CPSC", "course": "110"}] * 6
     response = client.post("/predict", json={"courses": courses})

@@ -37,11 +37,23 @@ class PredictRequest(BaseModel):
     )
 
 
+class ExplanationComponent(BaseModel):
+    """One of the four real historical signals behind a course's score."""
+
+    key: Literal["grade", "failrisk", "variance", "classsize"]
+    label: str = Field(..., description="Human-readable name, e.g. 'Fail risk'")
+    score: float = Field(..., description="0-100 percentile rank of this signal alone, for a bar chart")
+    detail: str = Field(..., description="Plain-English number behind the score, e.g. '12% of students historically fail'")
+
+
 class CoursePrediction(BaseModel):
     subject: str
     course: str
     difficulty_score: float = Field(
         ..., description="0-100, higher = historically harder. A proxy for workload, not a direct measurement - see README."
+    )
+    explanation: list[ExplanationComponent] = Field(
+        ..., description="The four real signals behind difficulty_score/personalized_score, for a per-course breakdown chart"
     )
     personalized_score: float | None = Field(
         None,

@@ -31,6 +31,7 @@ from feature_spec import (  # noqa: E402
     COMPONENT_SCORE_COLS,
     FEATURE_COLS,
     LABEL_COL,
+    RAW_EXPLANATION_COLS,
 )
 
 FEATURES_PATH = REPO_ROOT / "data" / "processed" / "features.parquet"
@@ -106,9 +107,13 @@ def compute_current_stats(features: pd.DataFrame):
     Also aggregates the four personalization components (COMPONENT_SCORE_COLS)
     the same way - these are never used as training features (see
     feature_spec.py), only as plain historical lookups for personalized
-    scoring in model/predict.py.
+    scoring in model/predict.py. Same for RAW_EXPLANATION_COLS (avg,
+    fail_rate, std_dev): human-readable numbers behind the "why" breakdown
+    the API returns per course, e.g. "historically ~68% average grade" -
+    without these, the component scores are just abstract 0-100 numbers.
     """
     component_aggs = {f"current_mean_{col}": (col, "mean") for col in COMPONENT_SCORE_COLS}
+    raw_aggs = {f"current_mean_{col}": (col, "mean") for col in RAW_EXPLANATION_COLS}
 
     course_stats = (
         features.groupby(["subject", "course"], observed=True)
@@ -119,6 +124,7 @@ def compute_current_stats(features: pd.DataFrame):
             course_level=("course_level", "last"),
             credits=("credits", "last"),
             **component_aggs,
+            **raw_aggs,
         )
         .reset_index()
     )
@@ -127,7 +133,9 @@ def compute_current_stats(features: pd.DataFrame):
         .agg(
             current_mean_difficulty=(LABEL_COL, "mean"),
             current_offerings_count=(LABEL_COL, "size"),
+            current_mean_enrolled=("enrolled", "mean"),
             **component_aggs,
+            **raw_aggs,
         )
         .reset_index()
     )
@@ -178,6 +186,8 @@ def main():
         "n_train_rows_final_model": len(features),
         "global_mean_difficulty": float(features[LABEL_COL].mean()),
         "global_mean_component": {col: float(features[col].mean()) for col in COMPONENT_SCORE_COLS},
+        "global_mean_raw": {col: float(features[col].mean()) for col in RAW_EXPLANATION_COLS},
+        "global_mean_enrolled": float(features["enrolled"].mean()),
         # XGBoost's categorical support (unlike LightGBM's) errors on a
         # category value it never saw during training, instead of handling
         # it gracefully. So at inference time we align incoming categorical

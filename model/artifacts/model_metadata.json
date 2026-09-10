@@ -42,6 +42,12 @@
     "variance_score": 50.00042191600496,
     "classsize_score": 50.00042191600496
   },
+  "global_mean_raw": {
+    "avg": 77.17289248736361,
+    "fail_rate": 0.025401714875600945,
+    "std_dev": 9.455275215810037
+  },
+  "global_mean_enrolled": 48.25335212265942,
   "categorical_categories": {
     "subject": [
       "AANB",

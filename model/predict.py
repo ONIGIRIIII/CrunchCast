@@ -28,6 +28,7 @@ from feature_spec import (  # noqa: E402
     COMPONENT_SCORE_COLS,
     FEATURE_COLS,
     NUMERIC_FEATURE_COLS,
+    RAW_EXPLANATION_COLS,
 )
 from metadata_provider import StaticCSVMetadataProvider  # noqa: E402
 
@@ -44,6 +45,21 @@ WEIGHT_TO_COMPONENT = {
 }
 DEFAULT_WEIGHTS = {key: 0.25 for key in WEIGHT_TO_COMPONENT}
 
+# Human-readable labels + raw-number formatting for the "why" breakdown
+# (see CourseDifficultyPredictor._explain). Each entry pairs a personalization
+# weight key with the raw historical column it explains and a formatter that
+# turns that raw number into a short, plain-English detail string.
+EXPLANATION_SPECS = [
+    {"key": "grade", "label": "Grade impact", "raw_col": "avg",
+     "format": lambda v: f"{v:.0f}% average grade historically"},
+    {"key": "failrisk", "label": "Fail risk", "raw_col": "fail_rate",
+     "format": lambda v: f"{v * 100:.0f}% of students historically fail"},
+    {"key": "variance", "label": "Grading unpredictability", "raw_col": "std_dev",
+     "format": lambda v: f"grades typically spread ±{v:.0f} points"},
+    {"key": "classsize", "label": "Class size", "raw_col": "enrolled",
+     "format": lambda v: f"~{v:.0f} students historically"},
+]
+
 
 class CourseDifficultyPredictor:
     """Loads all artifacts once; call predict_one() per course request."""
@@ -56,6 +72,8 @@ class CourseDifficultyPredictor:
         self.subject_stats = pd.read_parquet(artifacts_dir / "current_subject_stats.parquet")
         self.global_mean_difficulty = self.model_metadata["global_mean_difficulty"]
         self.global_mean_component = self.model_metadata["global_mean_component"]
+        self.global_mean_raw = self.model_metadata["global_mean_raw"]
+        self.global_mean_enrolled = self.model_metadata["global_mean_enrolled"]
         self.categorical_categories = self.model_metadata["categorical_categories"]
         self.course_metadata = StaticCSVMetadataProvider(METADATA_CSV_PATH)
 
@@ -154,6 +172,37 @@ class CourseDifficultyPredictor:
             return float(row["_subject_row"][stat_col])
         return float(self.global_mean_component[component_col])
 
+    def _raw_value(self, row: dict, raw_col: str) -> float:
+        """Same course -> subject -> global fallback chain as
+        _component_value, but for the human-readable raw number (average
+        grade, fail rate, std dev, enrolled) instead of its percentile rank."""
+        stat_col = f"current_mean_{raw_col}"
+        if row["_course_row"] is not None:
+            return float(row["_course_row"][stat_col])
+        if row["_subject_row"] is not None:
+            return float(row["_subject_row"][stat_col])
+        if raw_col == "enrolled":
+            return float(self.global_mean_enrolled)
+        return float(self.global_mean_raw[raw_col])
+
+    def _explain(self, row: dict) -> list[dict]:
+        """The four real signals behind both difficulty_score and
+        personalized_score, each with its 0-100 percentile (for a bar chart)
+        and a plain-English detail string (for the number behind the bar).
+        Always computed, independent of whether personalization weights were
+        supplied - this explains the OBJECTIVE score just as much as a
+        personalized one."""
+        explanation = []
+        for spec in EXPLANATION_SPECS:
+            raw_value = self._raw_value(row, spec["raw_col"])
+            explanation.append({
+                "key": spec["key"],
+                "label": spec["label"],
+                "score": round(self._component_value(row, spec["key"]), 1),
+                "detail": spec["format"](raw_value),
+            })
+        return explanation
+
     def _personalized_score(self, row: dict, weights: dict) -> float:
         """Weighted combination of the four real historical components -
         no model involved, just arithmetic over numbers we already computed
@@ -202,6 +251,7 @@ class CourseDifficultyPredictor:
             "confidence": confidence,
             "historical_offerings_count": row["hist_course_offerings_count"],
             "credits": row["credits"],
+            "explanation": self._explain(row),
         }
         if weights is not None:
             result["personalized_score"] = round(self._personalized_score(row, weights), 1)
