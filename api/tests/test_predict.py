@@ -70,6 +70,24 @@ def test_course_history_spans_pair_and_tableau_sources():
             assert t["std_dev"] is None
 
 
+def test_course_history_includes_instructors_and_distribution():
+    response = client.get("/courses/CPSC/110/history")
+    terms = response.json()["terms"]
+    # at least one recent term should have real instructor names
+    assert any(len(t["instructors"]) > 0 for t in terms)
+    for t in terms:
+        assert isinstance(t["instructors"], list)
+        if t["available"]:
+            assert t["distribution"] is not None
+            assert len(t["distribution"]) == 11
+            bins = {b["bin"] for b in t["distribution"]}
+            assert "<50" in bins and "90-100" in bins
+            for b in t["distribution"]:
+                assert b["count"] >= 0
+        else:
+            assert t["distribution"] is None
+
+
 def test_course_history_unknown_course_returns_empty_list():
     response = client.get("/courses/ZZZZ/999/history")
     assert response.status_code == 200

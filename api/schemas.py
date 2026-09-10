@@ -82,6 +82,11 @@ class CourseCatalogResponse(BaseModel):
     )
 
 
+class GradeBin(BaseModel):
+    bin: str = Field(..., description="Grade range label, e.g. '<50', '90-100'")
+    count: int = Field(..., description="Number of students who received a grade in this range")
+
+
 class CourseTermStats(BaseModel):
     """Real stats for one specific term (year+session), not an average -
     from data/processed/course_term_stats.parquet, which spans 1996 through
@@ -101,6 +106,12 @@ class CourseTermStats(BaseModel):
     high: float | None = None
     low: float | None = None
     fail_rate: float | None = Field(None, description="0-100, percent of students who received a failing grade")
+    instructors: list[str] = Field(
+        ..., description="Every distinct instructor reported across that term's sections; empty if none reported"
+    )
+    distribution: list["GradeBin"] | None = Field(
+        None, description="Grade-bin counts for this term, for a distribution chart; null when `available` is false"
+    )
     source: Literal["pair", "tableau_v1", "tableau_v2"] = Field(
         ..., description="Which underlying data source this term's row came from"
     )

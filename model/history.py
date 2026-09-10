@@ -12,11 +12,15 @@ data/README.md for why those two things are allowed to cover different
 windows.
 """
 
+import sys
 from pathlib import Path
 
 import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "data" / "scripts"))
+from grade_bins import BIN_COLS, BIN_LABELS  # noqa: E402
+
 COURSE_TERM_STATS_PATH = REPO_ROOT / "data" / "processed" / "course_term_stats.parquet"
 
 
@@ -36,6 +40,13 @@ class CourseHistoryProvider:
         terms = []
         for _, row in rows.iterrows():
             has_data = pd.notna(row["avg"])
+            distribution = None
+            if has_data:
+                distribution = [
+                    {"bin": BIN_LABELS[col], "count": int(row[col]) if pd.notna(row[col]) else 0}
+                    for col in BIN_COLS
+                ]
+            instructors = row["instructors"]
             terms.append({
                 "year": int(row["year"]),
                 "session": row["session"],
@@ -47,6 +58,8 @@ class CourseHistoryProvider:
                 "high": float(row["high"]) if pd.notna(row["high"]) else None,
                 "low": float(row["low"]) if pd.notna(row["low"]) else None,
                 "fail_rate": round(float(row["fail_rate"]) * 100, 1) if pd.notna(row["fail_rate"]) else None,
+                "instructors": list(instructors) if instructors is not None and len(instructors) else [],
+                "distribution": distribution,
                 "source": row["source"],
             })
         return terms

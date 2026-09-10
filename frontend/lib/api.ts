@@ -50,6 +50,11 @@ export interface PredictResponse {
   courses: CoursePrediction[];
 }
 
+export interface GradeBin {
+  bin: string;
+  count: number;
+}
+
 export interface CourseTermStats {
   year: number;
   session: Session;
@@ -61,6 +66,8 @@ export interface CourseTermStats {
   high: number | null;
   low: number | null;
   fail_rate: number | null;
+  instructors: string[];
+  distribution: GradeBin[] | null;
   source: "pair" | "tableau_v1" | "tableau_v2";
 }
 

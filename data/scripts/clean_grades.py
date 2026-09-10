@@ -20,6 +20,7 @@ Known data quirks handled here (documented in data/README.md):
 from pathlib import Path
 
 import pandas as pd
+from grade_bins import BIN_COLS
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RAW_DIR = REPO_ROOT / "data" / "raw" / "pair-reports" / "UBC"
@@ -55,6 +56,15 @@ RENAME = {
     "Other": "other",
 }
 
+# See grade_bins.py for BIN_COLS and why PAIR's own "<50" column is used
+# directly rather than re-summing the finer 0-9..40-49 columns underneath it.
+BIN_SOURCE_COLS = {  # BIN_COLS entry -> raw PAIR column(s)
+    "below_50": ["<50"],
+    "50_54": ["50-54"], "55_59": ["55-59"], "60_63": ["60-63"], "64_67": ["64-67"],
+    "68_71": ["68-71"], "72_75": ["72-75"], "76_79": ["76-79"], "80_84": ["80-84"],
+    "85_89": ["85-89"], "90_100": ["90-100"],
+}
+
 
 def load_raw_csvs() -> pd.DataFrame:
     csv_paths = sorted(RAW_DIR.glob("*/*.csv"))
@@ -88,11 +98,14 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
     df["fail_rate"] = df["n_fail"] / df["enrolled"]
     df["session_order"] = df["year"] * 2 + (df["session"] == "W").astype(int)
 
+    for bin_col, raw_cols in BIN_SOURCE_COLS.items():
+        df[bin_col] = df[raw_cols].sum(axis=1, skipna=True, min_count=1)
+
     keep_cols = key_cols + [
         "is_overall", "detail", "title", "professor", "enrolled",
         "avg", "std_dev", "high", "low", "n_pass", "n_fail", "fail_rate",
         "withdrew", "audit", "other", "session_order",
-    ]
+    ] + BIN_COLS
     return df[keep_cols].reset_index(drop=True)
 
 

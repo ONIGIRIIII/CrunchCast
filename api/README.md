@@ -36,15 +36,18 @@ root). Docs at `http://127.0.0.1:8000/docs`.
   objective `difficulty_score` too, not just a personalized one. See
   `schemas.py` for the full request/response shape.
 - `GET /courses/{subject}/{course}/history` - real per-term stats (avg,
-  std dev, high, low, fail rate, enrolled), most recent term first,
-  spanning 1996 through whatever's most recently available (currently
-  2025W). **Not the same data window the predictor uses** - the model only
-  ever trains/predicts on PAIR Reports data through 2016W; this endpoint
-  additionally draws on two newer, non-corrupted sources
-  (`tableau-dashboard` for 2017-2021, `tableau-dashboard-v2` for 2022+)
-  purely for display. `std_dev` is `null` for 2022+ terms since that
-  source doesn't report it - never estimated. See `data/README.md`'s
-  "Course-term history browser" section.
+  std dev, high, low, fail rate, enrolled, `instructors`, `distribution`),
+  most recent term first, spanning 1996 through whatever's most recently
+  available (currently 2025W). **Not the same data window the predictor
+  uses** - the model only ever trains/predicts on PAIR Reports data through
+  2016W; this endpoint additionally draws on two newer, non-corrupted
+  sources (`tableau-dashboard` for 2017-2021, `tableau-dashboard-v2` for
+  2022+) purely for display. `std_dev` is `null` for 2022+ terms since that
+  source doesn't report it - never estimated. `instructors` is every
+  distinct name reported across that term's sections (empty list if none).
+  `distribution` is the 11-bin grade breakdown (`{bin, count}` pairs) for
+  that term, `null` when the term's stats are unavailable/suppressed. See
+  `data/README.md`'s "Course-term history browser" section.
 
 ## Config
 

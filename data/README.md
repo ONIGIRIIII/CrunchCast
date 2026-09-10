@@ -153,10 +153,11 @@ offerings strictly earlier in `session_order` for the relevant group. See
 `data/processed/course_term_stats.parquet` powers `GET
 /courses/{subject}/{course}/history` and the frontend's "View by term"
 panel - real per-term numbers (average, std dev, high, low, fail rate,
-enrolled) for a specific year+session, not an aggregate. It spans 1996
-through whatever's most recently available (currently 2025W), built by
-`data/scripts/clean_tableau_data.py` from three sources with different
-schemas:
+enrolled, instructors, and the 11-bin grade distribution - see
+`data/scripts/grade_bins.py`) for a specific year+session, not an
+aggregate. It spans 1996 through whatever's most recently available
+(currently 2025W), built by `data/scripts/clean_tableau_data.py` from
+three sources with different schemas:
 
 - **PAIR (<=2016W)**: reuses the `OVERALL` rows already in
   `sections_clean.parquet` - has a real `Fail` count.
@@ -173,6 +174,20 @@ schemas:
   `null`/"not reported" for every 2022+ term - consistent with this
   project's "don't fabricate data, stub it clearly" principle (see the
   course metadata stub below).
+
+**`instructors`**: none of the three sources' `OVERALL`/term-level rows
+carry a professor name (a term can span several sections with different
+instructors), so it's collected separately from that term's individual
+section rows - every distinct, non-blank name (sections list multiple
+instructors separated by `;`), in the order first seen. Empty list, shown
+as "-" in the UI, if none were reported that term.
+
+**Grade distribution**: PAIR's raw CSVs break grades below 50 down further
+into five sub-bins (0-9, 10-19, ..., 40-49); their own `<50` column is
+already the total of those five (verified against a real row: CPSC 110
+2016W has 0-9..40-49 summing to 239, and `<50`=239, and `Fail`=239 - all
+three agree), so `<50` is used directly rather than re-summing the finer
+columns underneath it, which would double-count. See `grade_bins.py`.
 
 **This table is never read by `build_features.py`, `train.py`, or
 `predict.py`.** The prediction model only ever sees PAIR data through

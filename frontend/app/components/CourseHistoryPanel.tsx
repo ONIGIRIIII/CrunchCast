@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ApiError, getCourseHistory, type CourseTermStats } from "@/lib/api";
+import GradeDistributionChart from "./GradeDistributionChart";
 
 function termKey(t: CourseTermStats) {
   return `${t.year}${t.session}`;
@@ -104,7 +105,17 @@ export default function CourseHistoryPanel({ subject, course }: { subject: strin
                     <dt className="text-neutral-500">Enrolled</dt>
                     <dd className="font-medium">{selected.enrolled}</dd>
                   </div>
+                  <div className="col-span-3 sm:col-span-6">
+                    <dt className="text-neutral-500">Instructor{selected.instructors.length !== 1 ? "s" : ""}</dt>
+                    <dd className="font-medium">
+                      {selected.instructors.length > 0 ? selected.instructors.join(", ") : "-"}
+                    </dd>
+                  </div>
                 </dl>
+              )}
+
+              {selected && selected.available && selected.distribution && (
+                <GradeDistributionChart distribution={selected.distribution} />
               )}
             </>
           )}

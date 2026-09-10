@@ -31,8 +31,13 @@ from `api/`).
 - `app/components/CourseHistoryPanel.tsx` - per-course "View by term"
   toggle: lazy-fetches `GET /courses/{subject}/{course}/history` and lets
   you pick a specific term (1996 through the latest available, currently
-  2025W) to see that term's real avg/std-dev/high/low/fail-rate/enrolled,
-  as opposed to the all-time average the score itself is based on.
+  2025W) to see that term's real avg/std-dev/high/low/fail-rate/enrolled/
+  instructors, as opposed to the all-time average the score itself is
+  based on.
+- `app/components/GradeDistributionChart.tsx` - the selected term's 11-bin
+  grade distribution as a bar chart (single hue - a bar chart's height
+  already encodes magnitude, so color doesn't need to do that job too),
+  with a hover tooltip showing the exact count and percentage per bin.
 - `app/components/DifficultyBadge.tsx` / `ConfidenceNote.tsx` - small
   presentational pieces; `lib/scoreColor.ts` is the shared 0-100 color scale.
 - `lib/api.ts` - typed fetch wrapper for `GET /courses`, `POST /predict`,
@@ -53,6 +58,8 @@ from `api/`).
   courses, the 5-course cap, search autocomplete, the personalization quiz
   and its weighted "crunch score," the per-course explanation bar charts,
   the term-picker (checked both a 2025W term with no reported std dev and
-  a 2016W term with one, against the raw API response), and an
+  a 2016W term with one, against the raw API response), the grade
+  distribution chart's hover tooltip, instructor names (including the
+  singular/plural "Instructor(s)" label switching correctly), and an
   unknown-course request (falls back to "very low confidence" with a
   low-confidence warning banner).
