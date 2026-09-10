@@ -8,5 +8,5 @@ const LABELS: Record<Confidence, string> = {
 };
 
 export default function ConfidenceNote({ confidence }: { confidence: Confidence }) {
-  return <p className="text-xs text-neutral-500 dark:text-neutral-400">{LABELS[confidence]}</p>;
+  return <p className="text-xs text-[var(--color-text-subtle)]">{LABELS[confidence]}</p>;
 }

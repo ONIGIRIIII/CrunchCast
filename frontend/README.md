@@ -29,10 +29,28 @@ from `api/`).
   for it.
 - `app/components/PersonalizationQuiz.tsx` - 8-question quiz that turns
   answers into weights (`lib/weights.ts`), saved to `localStorage`.
-- `app/components/TermResults.tsx` - term readout + per-course breakdown.
-- `app/components/ExplanationChart.tsx` - per-course bar chart of the four
-  real signals (grade impact, fail risk, grading unpredictability, class
-  size) behind a score, each with a plain-English detail line.
+- `app/components/TermResults.tsx` - the post-predict dashboard: a full-width
+  course ticker, then a sticky left sidebar (term-score hero card, signal
+  breakdown, about-this-score) beside a right column of per-course cards
+  stacked one below another. Below the `lg` breakpoint both columns
+  collapse into a single stack and the sidebar stops sticking.
+- `app/components/SignalBars.tsx` - horizontal bar chart of the four real
+  signals (grade impact, fail risk, grading unpredictability, class size),
+  averaged across the term - label on top, a full-width colored bar below
+  it, sized/colored by that signal's own 0-100 score. Used only for the
+  sidebar's term-level average; per-course signals use `SignalGauges.tsx`
+  instead (a row of small gauges, one per signal, each with its
+  plain-English detail line as a caption).
+- `app/components/RiskGauge.tsx` - semi-circular gauge for a 0-100 score,
+  colored by the same green/yellow/red severity scale everywhere else
+  (`gaugeRingFor` in `lib/scoreColor.ts`). Reused at small size by
+  `SignalGauges.tsx` for each per-course signal.
+- `app/components/TermScoreChart.tsx` - hero card's line/area chart of each
+  course's own score across the term (real per-course scores, not a
+  fabricated time series).
+- `app/components/CourseTicker.tsx` - the full-width, top-of-page course
+  list (name, band, score) for a quick glance before scrolling to the
+  per-course breakdown below it.
 - `app/components/CourseHistoryPanel.tsx` - per-course "View by term"
   toggle: lazy-fetches `GET /courses/{subject}/{course}/history` and lets
   you pick a specific term (1996 through the latest available, currently

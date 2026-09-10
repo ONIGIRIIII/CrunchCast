@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ApiError, getCourseHistory, type CourseTermStats, type SectionStats } from "@/lib/api";
 import GradeDistributionChart from "./GradeDistributionChart";
+import StatTile from "./StatTile";
 
 const OVERALL = "__overall__";
 
@@ -14,7 +15,15 @@ function termLabel(t: CourseTermStats) {
   return `${t.year}${t.session} (${t.session_label})`;
 }
 
-export default function CourseHistoryPanel({ subject, course }: { subject: string; course: string }) {
+export default function CourseHistoryPanel({
+  subject,
+  course,
+  accentHex,
+}: {
+  subject: string;
+  course: string;
+  accentHex: string;
+}) {
   const [open, setOpen] = useState(false);
   const [terms, setTerms] = useState<CourseTermStats[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -52,52 +61,61 @@ export default function CourseHistoryPanel({ subject, course }: { subject: strin
     selectedTerm?.sections.find((s) => s.section === selectedSection) ?? null;
 
   return (
-    <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
-      <button onClick={toggle} className="text-xs font-medium text-blue-600 dark:text-blue-400">
+    <div className="mt-5 pt-5 border-t border-[var(--color-border)]">
+      <button
+        onClick={toggle}
+        className="text-sm font-medium text-blue-400 hover:text-blue-300"
+      >
         {open ? "Hide" : "View"} by term {open ? "▴" : "▾"}
       </button>
 
       {open && (
-        <div className="mt-2">
-          {loading && <p className="text-xs text-neutral-500">Loading...</p>}
-          {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+        <div className="mt-4 rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-hover-surface)]/40 p-4">
+          {loading && <p className="text-sm text-[var(--color-text-subtle)]">Loading...</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
           {terms && terms.length === 0 && (
-            <p className="text-xs text-neutral-500">No term-by-term data for this course.</p>
+            <p className="text-sm text-[var(--color-text-subtle)]">No term-by-term data for this course.</p>
           )}
 
           {terms && terms.length > 0 && (
             <>
-              <div className="flex flex-wrap gap-2">
-                <select
-                  value={selectedTermKey ?? ""}
-                  onChange={(e) => selectTerm(e.target.value)}
-                  className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1 text-xs"
-                >
-                  {terms.map((t) => (
-                    <option key={termKey(t)} value={termKey(t)}>
-                      {termLabel(t)}
-                    </option>
-                  ))}
-                </select>
-
-                {selectedTerm && selectedTerm.sections.length > 0 && (
+              <div className="flex flex-wrap gap-4">
+                <div>
+                  <label className="block text-[11px] font-medium text-[var(--color-text-subtle)] mb-1">Term</label>
                   <select
-                    value={selectedSection}
-                    onChange={(e) => setSelectedSection(e.target.value)}
-                    className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1 text-xs"
+                    value={selectedTermKey ?? ""}
+                    onChange={(e) => selectTerm(e.target.value)}
+                    className="rounded-md border border-[var(--color-border-strong)] bg-transparent px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
                   >
-                    <option value={OVERALL}>Overall</option>
-                    {selectedTerm.sections.map((s) => (
-                      <option key={s.section} value={s.section}>
-                        Section {s.section}
+                    {terms.map((t) => (
+                      <option key={termKey(t)} value={termKey(t)}>
+                        {termLabel(t)}
                       </option>
                     ))}
                   </select>
+                </div>
+
+                {selectedTerm && selectedTerm.sections.length > 0 && (
+                  <div>
+                    <label className="block text-[11px] font-medium text-[var(--color-text-subtle)] mb-1">Section</label>
+                    <select
+                      value={selectedSection}
+                      onChange={(e) => setSelectedSection(e.target.value)}
+                      className="rounded-md border border-[var(--color-border-strong)] bg-transparent px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+                    >
+                      <option value={OVERALL}>Overall</option>
+                      {selectedTerm.sections.map((s) => (
+                        <option key={s.section} value={s.section}>
+                          Section {s.section}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 )}
               </div>
 
               {selectedTerm && !selectedTerm.available && (
-                <p className="mt-2 text-xs text-neutral-500">
+                <p className="mt-3 text-sm text-[var(--color-text-subtle)]">
                   Not reported for this term (likely privacy-suppressed - too few students).
                 </p>
               )}
@@ -105,76 +123,63 @@ export default function CourseHistoryPanel({ subject, course }: { subject: strin
               {/* Overall: the term's blended stats + a comparison of that term's actual instructors */}
               {selectedTerm && selectedTerm.available && selectedSection === OVERALL && (
                 <>
-                  <dl className="mt-2 grid grid-cols-3 gap-x-4 gap-y-2 text-xs sm:grid-cols-6">
-                    <div>
-                      <dt className="text-neutral-500">Average</dt>
-                      <dd className="font-medium">{selectedTerm.avg}%</dd>
-                    </div>
-                    <div>
-                      <dt className="text-neutral-500">Std dev</dt>
-                      <dd className="font-medium">{selectedTerm.std_dev != null ? selectedTerm.std_dev : "-"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-neutral-500">High</dt>
-                      <dd className="font-medium">{selectedTerm.high}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-neutral-500">Low</dt>
-                      <dd className="font-medium">{selectedTerm.low}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-neutral-500">Fail rate</dt>
-                      <dd className="font-medium">{selectedTerm.fail_rate}%</dd>
-                    </div>
-                    <div>
-                      <dt className="text-neutral-500">Enrolled</dt>
-                      <dd className="font-medium">{selectedTerm.enrolled}</dd>
-                    </div>
-                  </dl>
+                  <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
+                    <StatTile label="Average" value={`${selectedTerm.avg}%`} dotColor={accentHex} />
+                    <StatTile label="Std dev" value={selectedTerm.std_dev ?? "-"} dotColor={accentHex} />
+                    <StatTile label="High" value={selectedTerm.high ?? "-"} dotColor={accentHex} />
+                    <StatTile label="Low" value={selectedTerm.low ?? "-"} dotColor={accentHex} />
+                    <StatTile label="Fail rate" value={`${selectedTerm.fail_rate}%`} dotColor={accentHex} />
+                    <StatTile label="Enrolled" value={selectedTerm.enrolled ?? "-"} dotColor={accentHex} />
+                  </div>
 
-                  {selectedTerm.distribution && <GradeDistributionChart distribution={selectedTerm.distribution} />}
+                  {selectedTerm.distribution && (
+                    <GradeDistributionChart distribution={selectedTerm.distribution} accentHex={accentHex} />
+                  )}
 
                   {selectedTerm.instructor_stats.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-xs text-neutral-500 mb-1.5">
+                    <div className="mt-4">
+                      <p className="text-xs text-[var(--color-text-subtle)] mb-2">
                         Instructors this term
                         {selectedTerm.best_instructor && " - compared against each other below"}
                       </p>
-                      <div className="overflow-x-auto">
+                      <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
                         <table className="w-full text-xs">
                           <thead>
-                            <tr className="text-left text-neutral-500">
-                              <th className="font-normal pr-3 py-1">Instructor</th>
-                              <th className="font-normal pr-3 py-1">Sections</th>
-                              <th className="font-normal pr-3 py-1">Avg</th>
-                              <th className="font-normal pr-3 py-1">Fail rate</th>
-                              <th className="font-normal pr-3 py-1">Std dev</th>
-                              <th className="font-normal py-1">Enrolled</th>
+                            <tr className="text-left text-[var(--color-text-subtle)] bg-[var(--color-hover-surface)]/60">
+                              <th className="font-normal pl-3 pr-3 py-2">Instructor</th>
+                              <th className="font-normal pr-3 py-2">Sections</th>
+                              <th className="font-normal pr-3 py-2">Avg</th>
+                              <th className="font-normal pr-3 py-2">Fail rate</th>
+                              <th className="font-normal pr-3 py-2">Std dev</th>
+                              <th className="font-normal pr-3 py-2">Enrolled</th>
                             </tr>
                           </thead>
                           <tbody>
                             {selectedTerm.instructor_stats.map((s) => (
-                              <tr key={s.instructor} className="border-t border-neutral-100 dark:border-neutral-900">
-                                <td className="pr-3 py-1">
+                              <tr
+                                key={s.instructor}
+                                className="border-t border-[var(--color-border)] hover:bg-[var(--color-hover-surface)]/60 transition-colors"
+                              >
+                                <td className="pl-3 pr-3 py-2">
                                   <span className="font-medium">{s.instructor}</span>
                                   {selectedTerm.best_instructor === s.instructor && (
-                                    <span className="ml-1.5 inline-block rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 text-[10px]">
+                                    <span className="ml-1.5 inline-block rounded-full bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 text-[10px]">
                                       Best pick this term
                                     </span>
                                   )}
                                 </td>
-                                <td className="pr-3 py-1">{s.sections.join(", ")}</td>
-                                <td className="pr-3 py-1">{s.avg}%</td>
-                                <td className="pr-3 py-1">{s.fail_rate}%</td>
-                                <td className="pr-3 py-1">{s.std_dev != null ? s.std_dev : "-"}</td>
-                                <td className="py-1">{s.enrolled}</td>
+                                <td className="pr-3 py-2">{s.sections.join(", ")}</td>
+                                <td className="pr-3 py-2">{s.avg}%</td>
+                                <td className="pr-3 py-2">{s.fail_rate}%</td>
+                                <td className="pr-3 py-2">{s.std_dev != null ? s.std_dev : "-"}</td>
+                                <td className="pr-3 py-2">{s.enrolled}</td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
                       {selectedTerm.best_instructor && (
-                        <p className="mt-2 text-xs text-neutral-500">
+                        <p className="mt-2.5 text-xs text-[var(--color-text-subtle)]">
                           Historical grade outcomes only, not a teaching-quality rating - self-selection, exam
                           difficulty, and TA support all affect these numbers too.
                         </p>
@@ -186,38 +191,31 @@ export default function CourseHistoryPanel({ subject, course }: { subject: strin
 
               {/* A specific section: that section's own numbers, plus who taught it - no comparison/best-pick marking */}
               {selectedSectionStats && (
-                <dl className="mt-2 grid grid-cols-3 gap-x-4 gap-y-2 text-xs sm:grid-cols-5">
-                  <div>
-                    <dt className="text-neutral-500">Average</dt>
-                    <dd className="font-medium">{selectedSectionStats.avg}%</dd>
-                  </div>
-                  <div>
-                    <dt className="text-neutral-500">Std dev</dt>
-                    <dd className="font-medium">
-                      {selectedSectionStats.std_dev != null ? selectedSectionStats.std_dev : "-"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-neutral-500">Fail rate</dt>
-                    <dd className="font-medium">{selectedSectionStats.fail_rate}%</dd>
-                  </div>
-                  <div>
-                    <dt className="text-neutral-500">Enrolled</dt>
-                    <dd className="font-medium">{selectedSectionStats.enrolled}</dd>
-                  </div>
+                <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
+                  <StatTile label="Average" value={`${selectedSectionStats.avg}%`} dotColor={accentHex} />
+                  <StatTile
+                    label="Std dev"
+                    value={selectedSectionStats.std_dev ?? "-"}
+                    dotColor={accentHex}
+                  />
+                  <StatTile label="Fail rate" value={`${selectedSectionStats.fail_rate}%`} dotColor={accentHex} />
+                  <StatTile label="Enrolled" value={selectedSectionStats.enrolled} dotColor={accentHex} />
                   <div className="col-span-3 sm:col-span-1">
-                    <dt className="text-neutral-500">
-                      Instructor{selectedSectionStats.instructors.length !== 1 ? "s" : ""}
-                    </dt>
-                    <dd className="font-medium">
-                      {selectedSectionStats.instructors.length > 0 ? selectedSectionStats.instructors.join(", ") : "-"}
-                    </dd>
+                    <StatTile
+                      label={`Instructor${selectedSectionStats.instructors.length !== 1 ? "s" : ""}`}
+                      value={
+                        selectedSectionStats.instructors.length > 0
+                          ? selectedSectionStats.instructors.join(", ")
+                          : "-"
+                      }
+                      dotColor={accentHex}
+                    />
                   </div>
-                </dl>
+                </div>
               )}
 
               {selectedSectionStats?.distribution && (
-                <GradeDistributionChart distribution={selectedSectionStats.distribution} />
+                <GradeDistributionChart distribution={selectedSectionStats.distribution} accentHex={accentHex} />
               )}
             </>
           )}

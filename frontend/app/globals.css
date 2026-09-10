@@ -1,26 +1,65 @@
 @import "tailwindcss";
 
+/* Dark is the default (no data-theme attribute set); light is an explicit
+   opt-in via [data-theme="light"] on <html> (see lib/theme.ts). */
 :root {
+  --background: #0a0a0b;
+  --surface: #161617;
+  --surface-raised: #1c1c1e;
+  --foreground: #f2f2f3;
+  --border: #27272a;
+  --border-strong: #3f3f46;
+  --text-muted: #a3a3a3;
+  --text-subtle: #737373;
+  --hover-surface: #212124;
+  --hatch-rgb: 255 255 255;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
   --background: #ffffff;
-  --foreground: #171717;
+  --surface: #f6f6f7;
+  --surface-raised: #ffffff;
+  --foreground: #18181b;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --text-muted: #52525b;
+  --text-subtle: #71717a;
+  --hover-surface: #ececee;
+  --hatch-rgb: 0 0 0;
+  color-scheme: light;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
   --color-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-hover-surface: var(--hover-surface);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  line-height: 1.5;
+}
+
+/* Diagonal hatch texture for "unfilled" chart regions - dashboard reference's
+   visual language for placeholder/empty allocation. Stripe color flips with
+   the theme so it stays visible on both a dark and a light track. */
+.hatch-texture {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgb(var(--hatch-rgb) / 0.08) 0px,
+    rgb(var(--hatch-rgb) / 0.08) 1px,
+    transparent 1px,
+    transparent 6px
+  );
 }

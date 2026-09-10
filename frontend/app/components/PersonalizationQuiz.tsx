@@ -5,6 +5,7 @@ import type { Weights } from "@/lib/api";
 import { QUIZ_QUESTIONS, computeWeights, saveWeights } from "@/lib/weights";
 
 const LIKERT_LABELS = ["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"];
+const TOTAL = QUIZ_QUESTIONS.length;
 
 interface Props {
   open: boolean;
@@ -14,81 +15,118 @@ interface Props {
 
 export default function PersonalizationQuiz({ open, onClose, onComplete }: Props) {
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [step, setStep] = useState(0);
 
   if (!open) return null;
 
-  const allAnswered = QUIZ_QUESTIONS.every((q) => answers[q.id] != null);
+  const question = QUIZ_QUESTIONS[step];
+  const isLast = step === TOTAL - 1;
+  const answered = answers[question.id] != null;
+
+  // Reset the step back to the first question on the way out - whether via
+  // Skip, the backdrop, the close button, or a completed submission - so
+  // the quiz always starts from question 1 next time it's opened
+  // (previous answers are kept, so retaking feels like editing, not
+  // starting over).
+  function close() {
+    setStep(0);
+    onClose();
+  }
 
   function submit() {
     const weights = computeWeights(answers);
     saveWeights(weights);
+    setStep(0);
     onComplete(weights);
+  }
+
+  function next() {
+    if (isLast) {
+      submit();
+    } else {
+      setStep((s) => s + 1);
+    }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-10 px-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-base font-semibold">What does &quot;crunch&quot; mean to you?</h2>
+      <div className="absolute inset-0 bg-black/40" onClick={close} />
+      <div className="relative w-full max-w-xl rounded-2xl bg-[var(--color-surface-raised)] border border-[var(--color-border)] p-7 sm:p-8 shadow-lg">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold">What does &quot;crunch&quot; mean to you?</h2>
           <button
-            onClick={onClose}
+            onClick={close}
             aria-label="Close quiz"
-            className="rounded-full w-6 h-6 text-sm text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            className="rounded-full w-7 h-7 flex items-center justify-center text-sm text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)]"
           >
             ×
           </button>
         </div>
-        <p className="text-xs text-neutral-500 mb-5">
-          8 quick questions. Your answers set how much weight your personalized score gives to
-          grade impact, fail risk, grading unpredictability, and class size - all based on real
-          historical data, just combined differently for you. Saved only in this browser.
+        <p className="text-sm text-[var(--color-text-subtle)] mb-5 leading-relaxed">
+          Your answers set how much weight your personalized score gives to grade impact, fail risk,
+          grading unpredictability, and class size - all based on real historical data, just combined
+          differently for you. Saved only in this browser.
         </p>
 
-        <div className="flex flex-col gap-5">
-          {QUIZ_QUESTIONS.map((q, i) => (
-            <div key={q.id}>
-              <p className="text-sm mb-2">
-                {i + 1}. {q.text}
-              </p>
-              <div className="flex gap-1.5">
-                {LIKERT_LABELS.map((label, value0) => {
-                  const value = value0 + 1;
-                  const selected = answers[q.id] === value;
-                  return (
-                    <button
-                      key={value}
-                      title={label}
-                      onClick={() => setAnswers((prev) => ({ ...prev, [q.id]: value }))}
-                      className={`flex-1 rounded-md border py-1.5 text-xs ${
-                        selected
-                          ? "bg-blue-600 border-blue-600 text-white"
-                          : "border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-900"
-                      }`}
-                    >
-                      {value}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="flex justify-between text-[10px] text-neutral-400 mt-1">
-                <span>{LIKERT_LABELS[0]}</span>
-                <span>{LIKERT_LABELS[4]}</span>
-              </div>
-            </div>
-          ))}
+        <div className="flex items-center justify-between text-xs text-[var(--color-text-subtle)] mb-1.5">
+          <span>
+            Question {step + 1} of {TOTAL}
+          </span>
+        </div>
+        <div className="h-1.5 w-full rounded-full bg-[var(--color-border)] overflow-hidden mb-6">
+          <div
+            className="h-full rounded-full bg-blue-600 transition-all"
+            style={{ width: `${((step + 1) / TOTAL) * 100}%` }}
+          />
         </div>
 
-        <div className="flex items-center justify-between mt-6">
-          <button onClick={onClose} className="text-xs text-neutral-500">
-            Skip for now
-          </button>
+        <div key={question.id}>
+          <p className="text-base mb-4">{question.text}</p>
+          <div className="flex gap-2">
+            {LIKERT_LABELS.map((label, value0) => {
+              const value = value0 + 1;
+              const selected = answers[question.id] === value;
+              return (
+                <button
+                  key={value}
+                  title={label}
+                  onClick={() => setAnswers((prev) => ({ ...prev, [question.id]: value }))}
+                  className={`flex-1 rounded-md border py-2.5 text-xs transition-colors ${
+                    selected
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "border-[var(--color-border-strong)] hover:bg-[var(--color-hover-surface)]"
+                  }`}
+                >
+                  {value}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex justify-between text-[10px] text-[var(--color-text-muted)] mt-1.5">
+            <span>{LIKERT_LABELS[0]}</span>
+            <span>{LIKERT_LABELS[4]}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mt-7">
+          {step === 0 ? (
+            <button onClick={close} className="text-xs text-[var(--color-text-subtle)] hover:text-[var(--color-foreground)]">
+              Skip for now
+            </button>
+          ) : (
+            <button
+              onClick={() => setStep((s) => Math.max(0, s - 1))}
+              className="text-xs text-[var(--color-text-subtle)] hover:text-[var(--color-foreground)]"
+            >
+              ← Back
+            </button>
+          )}
           <button
-            onClick={submit}
-            disabled={!allAnswered}
-            className="rounded-md bg-blue-600 text-white px-5 py-2 text-sm font-medium disabled:opacity-40"
+            onClick={next}
+            disabled={!answered}
+            className="rounded-md bg-blue-600 text-white px-5 py-2.5 text-sm font-medium disabled:opacity-40 hover:bg-blue-700 transition-colors"
           >
-            See my crunch weights
+            {isLast ? "See my crunch weights" : "Next"}
           </button>
         </div>
       </div>
