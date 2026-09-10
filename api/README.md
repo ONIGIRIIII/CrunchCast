@@ -49,9 +49,10 @@ root). Docs at `http://127.0.0.1:8000/docs`.
   is the 11-bin grade breakdown (`{bin, count}` pairs) for that term,
   `null` when the term's stats are unavailable/suppressed. `sections` is
   that term's actual, individual sections (`section`, `instructors`, `avg`,
-  `std_dev`, `fail_rate`, `enrolled`), un-combined - for picking one
-  specific section and seeing just its own numbers and instructor(s).
-  `instructor_stats` is the same term's sections combined up to instructor
+  `std_dev`, `fail_rate`, `enrolled`, `distribution`), un-combined - for
+  picking one specific section and seeing just its own numbers,
+  instructor(s), and its own 11-bin distribution (not the term's blended
+  one). `instructor_stats` is the same term's sections combined up to instructor
   granularity (`instructor`, `sections`, `avg`, `std_dev`, `fail_rate`,
   `enrolled`) - each instructor's own sections that term merged
   (enrollment-weighted) into a single row, so a professor teaching two

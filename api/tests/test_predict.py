@@ -115,6 +115,26 @@ def test_course_history_includes_raw_sections_scoped_to_that_term():
     assert kiczales_bcs["instructors"] == ["Kiczales, Gregor"]
 
 
+def test_course_history_section_has_its_own_grade_distribution():
+    """Each section carries its own 11-bin distribution, distinct from the
+    term's blended one - so a specific section's chart isn't just the
+    term-wide numbers repeated."""
+    response = client.get("/courses/CPSC/110/history")
+    terms = response.json()["terms"]
+    term_2016w = next(t for t in terms if t["year"] == 2016 and t["session"] == "W")
+    section_102 = next(s for s in term_2016w["sections"] if s["section"] == "102")
+    assert section_102["distribution"] is not None
+    assert len(section_102["distribution"]) == 11
+    bins = {b["bin"] for b in section_102["distribution"]}
+    assert "<50" in bins and "90-100" in bins
+    for b in section_102["distribution"]:
+        assert b["count"] >= 0
+    # a single section's counts should be smaller than the term's blended total
+    section_total = sum(b["count"] for b in section_102["distribution"])
+    term_total = sum(b["count"] for b in term_2016w["distribution"])
+    assert 0 < section_total < term_total
+
+
 def test_course_history_includes_instructor_stats_scoped_to_that_term():
     """Instructor stats should be scoped to the specific term, not an
     all-time list, and combined across each instructor's own sections that

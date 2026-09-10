@@ -62,6 +62,7 @@ export interface SectionStats {
   std_dev: number | null;
   fail_rate: number;
   enrolled: number;
+  distribution: GradeBin[] | null;
 }
 
 export interface InstructorTermStats {

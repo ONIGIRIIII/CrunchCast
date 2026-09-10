@@ -215,6 +215,10 @@ export default function CourseHistoryPanel({ subject, course }: { subject: strin
                   </div>
                 </dl>
               )}
+
+              {selectedSectionStats?.distribution && (
+                <GradeDistributionChart distribution={selectedSectionStats.distribution} />
+              )}
             </>
           )}
         </div>

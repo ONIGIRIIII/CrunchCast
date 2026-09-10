@@ -29,6 +29,10 @@ simplification used everywhere else in this project.
 "Best instructor" is deliberately simple (highest combined average grade
 that term, only computed when there are 2+ instructors to compare) and is
 not a teaching-quality judgment - see data/README.md.
+
+Each section also carries its own 11-bin grade distribution (same shape as
+the term-level one), so a specific section's own distribution chart can be
+shown, not just the term's blended one.
 """
 
 import sys
@@ -42,6 +46,12 @@ from grade_bins import BIN_COLS, BIN_LABELS  # noqa: E402
 
 COURSE_TERM_STATS_PATH = REPO_ROOT / "data" / "processed" / "course_term_stats.parquet"
 COURSE_SECTION_STATS_PATH = REPO_ROOT / "data" / "processed" / "course_section_stats.parquet"
+
+
+def _distribution_from_row(row) -> list[dict] | None:
+    if pd.isna(row["avg"]):
+        return None
+    return [{"bin": BIN_LABELS[col], "count": int(row[col]) if pd.notna(row[col]) else 0} for col in BIN_COLS]
 
 
 class CourseHistoryProvider:
@@ -74,6 +84,7 @@ class CourseHistoryProvider:
                 "std_dev": round(float(row["std_dev"]), 1) if pd.notna(row["std_dev"]) else None,
                 "fail_rate": round(float(row["fail_rate"]) * 100, 1),
                 "enrolled": int(row["enrolled"]),
+                "distribution": _distribution_from_row(row),
             }
             for _, row in rows.iterrows()
         ]
@@ -138,12 +149,7 @@ class CourseHistoryProvider:
         terms = []
         for _, row in rows.iterrows():
             has_data = pd.notna(row["avg"])
-            distribution = None
-            if has_data:
-                distribution = [
-                    {"bin": BIN_LABELS[col], "count": int(row[col]) if pd.notna(row[col]) else 0}
-                    for col in BIN_COLS
-                ]
+            distribution = _distribution_from_row(row)
             instructors = row["instructors"]
             sections = self._sections_for_term(subject, course, int(row["year"]), row["session"])
             instructor_stats = self._instructor_stats_for_term(subject, course, int(row["year"]), row["session"])

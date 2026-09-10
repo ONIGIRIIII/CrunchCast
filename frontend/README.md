@@ -41,15 +41,20 @@ from `api/`).
   term) and a disclaimer that this is historical grade outcomes only, not a
   teaching-quality rating. With one specific section selected (e.g.
   "Section 102"), shows only that section's own numbers (not combined with
-  any other section) and its instructor(s) - no comparison table, no badge.
-  Sections are scoped strictly to the selected term, never an all-time
-  list; a term→section reset on term change happens in the `selectTerm()`
-  handler rather than a `useEffect`, to avoid the
+  any other section), its instructor(s), and its own grade distribution
+  chart - no comparison table, no badge. Both views render a
+  `GradeDistributionChart`: the term's blended distribution for Overall, or
+  the selected section's own (smaller) distribution otherwise - never the
+  same numbers shown twice. Sections are scoped strictly to the selected
+  term, never an all-time list; a term→section reset on term change happens
+  in the `selectTerm()` handler rather than a `useEffect`, to avoid the
   `react-hooks/set-state-in-effect` lint rule.
-- `app/components/GradeDistributionChart.tsx` - the selected term's 11-bin
-  grade distribution as a bar chart (single hue - a bar chart's height
-  already encodes magnitude, so color doesn't need to do that job too),
-  with a hover tooltip showing the exact count and percentage per bin.
+- `app/components/GradeDistributionChart.tsx` - a reusable 11-bin grade
+  distribution bar chart (single hue - a bar chart's height already
+  encodes magnitude, so color doesn't need to do that job too), with a
+  hover tooltip showing the exact count and percentage per bin. Used by
+  `CourseHistoryPanel.tsx` for both the term-level (Overall) and
+  section-level distributions.
 - `app/components/DifficultyBadge.tsx` / `ConfidenceNote.tsx` - small
   presentational pieces; `lib/scoreColor.ts` is the shared 0-100 color scale.
 - `lib/api.ts` - typed fetch wrapper for `GET /courses`, `POST /predict`,
@@ -81,6 +86,8 @@ from `api/`).
   specific-section selection (e.g. "Section 102") showing only that
   section's own 80.7% average and instructor with no comparison table or
   badge - distinct from Overall's combined 82.5% for the same instructor -
-  and an unknown-course request
+  the section's own grade distribution chart rendering alongside it
+  (confirmed visually smaller/different from the term's blended
+  distribution, not the same chart repeated), and an unknown-course request
   (falls back to "very low confidence" with a low-confidence warning
   banner).

@@ -101,6 +101,9 @@ class SectionStats(BaseModel):
     std_dev: float | None = Field(None, description="Not reported by the source for 2022+ terms - null, never estimated")
     fail_rate: float = Field(..., description="0-100, percent of students who received a failing grade")
     enrolled: int
+    distribution: list["GradeBin"] | None = Field(
+        None, description="This section's own 11-bin grade distribution, for a distribution chart; null when unavailable"
+    )
 
 
 class InstructorTermStats(BaseModel):

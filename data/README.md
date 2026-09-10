@@ -201,12 +201,16 @@ leaking into what the model trains or predicts on.
 `data/processed/course_section_stats.parquet`, built by
 `data/scripts/clean_section_stats.py`, is the raw per-SECTION building
 block: one row per (subject, course, year, session, section) - instructor(s),
-avg, std dev, fail rate, enrolled. `model/history.py` reads it two ways for
-each term:
+avg, std dev, fail rate, enrolled, and (like `course_term_stats.parquet`)
+that section's own 11-bin grade distribution. `model/history.py` reads it
+two ways for each term:
 
 - **`sections`** - the raw rows as-is, one per real section, for picking a
   specific section (e.g. "Section 102") and seeing exactly that section's
-  own numbers and its instructor(s) - no combining.
+  own numbers, instructor(s), and its own grade distribution chart - no
+  combining. E.g. CPSC 110 2016W section 102's distribution (188 students
+  across the 11 bins) is a small slice of the term's blended 1,520-student
+  distribution, not the same numbers repeated.
 - **`instructor_stats`/`best_instructor`** (`_instructor_stats_for_term`) -
   the same rows combined up to instructor granularity: every section a
   given instructor taught within that term is merged into one

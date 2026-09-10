@@ -11,6 +11,10 @@ instructor teaching two sections in the same term gets one enrollment-
 weighted row, not two) before it reaches the API - see that module's
 docstring and data/README.md's "Per-term instructor stats" section for why.
 
+Includes the same 11-bin grade distribution as course_term_stats.parquet
+(see grade_bins.py) so a specific section's own distribution chart can be
+shown, not just the term's blended one.
+
 Scoped to the professors who taught THAT term, not an all-time list. This
 replaces the earlier all-time "Compare instructors" feature per user
 feedback (it showed every instructor who'd ever taught the course, not
@@ -23,6 +27,7 @@ by build_features.py, train.py, or predict.py.
 from pathlib import Path
 
 import pandas as pd
+from grade_bins import BIN_COLS
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SECTIONS_CLEAN_PATH = REPO_ROOT / "data" / "processed" / "sections_clean.parquet"
@@ -30,7 +35,8 @@ TABLEAU_V1_DIR = REPO_ROOT / "data" / "raw" / "tableau-dashboard" / "UBCV"
 TABLEAU_V2_DIR = REPO_ROOT / "data" / "raw" / "tableau-dashboard-v2" / "UBCV"
 OUT_PATH = REPO_ROOT / "data" / "processed" / "course_section_stats.parquet"
 
-OUTPUT_COLS = ["year", "session", "subject", "course", "section", "instructors", "avg", "std_dev", "fail_rate", "enrolled", "source"]
+OUTPUT_COLS = ["year", "session", "subject", "course", "section", "instructors", "avg", "std_dev", "fail_rate", "enrolled", "source"] + BIN_COLS
+RAW_BIN_COLS = ["<50", "50-54", "55-59", "60-63", "64-67", "68-71", "72-75", "76-79", "80-84", "85-89", "90-100"]
 
 
 def _numeric(df: pd.DataFrame, col: str) -> pd.Series:
@@ -76,7 +82,9 @@ def load_tableau_v1_sections() -> pd.DataFrame:
     df["avg"] = _numeric(df, "Avg")
     df["std_dev"] = _numeric(df, "Std dev")
     df["enrolled"] = _numeric(df, "Enrolled")
-    df["fail_rate"] = _numeric(df, "<50") / df["enrolled"]
+    for bin_col, raw_col in zip(BIN_COLS, RAW_BIN_COLS):
+        df[bin_col] = _numeric(df, raw_col)
+    df["fail_rate"] = df["below_50"] / df["enrolled"]
     df["instructors"] = df["Professor"].apply(_split_instructors)
     df["source"] = "tableau_v1"
     df = df.dropna(subset=["avg"])
@@ -98,7 +106,9 @@ def load_tableau_v2_sections() -> pd.DataFrame:
     df["avg"] = _numeric(df, "Avg")
     df["std_dev"] = float("nan")  # not reported in this era - never estimated
     df["enrolled"] = _numeric(df, "Reported")
-    df["fail_rate"] = _numeric(df, "<50") / df["enrolled"]
+    for bin_col, raw_col in zip(BIN_COLS, RAW_BIN_COLS):
+        df[bin_col] = _numeric(df, raw_col)
+    df["fail_rate"] = df["below_50"] / df["enrolled"]
     df["instructors"] = df["Professor"].apply(_split_instructors)
     df["source"] = "tableau_v2"
     df = df.dropna(subset=["avg"])
