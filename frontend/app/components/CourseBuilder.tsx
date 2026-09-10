@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError, predictTerm, type CourseInput, type PredictResponse, type Session, type Weights } from "@/lib/api";
 import { clearWeights, loadWeights } from "@/lib/weights";
 import TermResults from "./TermResults";
-import CourseNavSidebar from "./CourseNavSidebar";
+import CourseSearch from "./CourseSearch";
 import PersonalizationQuiz from "./PersonalizationQuiz";
 
 const MAX_COURSES = 8;
@@ -19,7 +19,6 @@ export default function CourseBuilder() {
   const [result, setResult] = useState<PredictResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quizOpen, setQuizOpen] = useState(false);
   const [weights, setWeights] = useState<Weights | null>(null);
 
@@ -72,20 +71,6 @@ export default function CourseBuilder() {
 
   return (
     <div className="flex flex-col gap-8">
-      <button
-        onClick={() => setSidebarOpen(true)}
-        className="fixed top-4 left-4 z-40 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm font-medium shadow-sm flex items-center gap-2"
-      >
-        <span aria-hidden>☰</span> Courses
-      </button>
-
-      <CourseNavSidebar
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onSelectCourse={(subject, course) => addCourseIfNew(subject, course, "W")}
-        addedKeys={addedKeys}
-      />
-
       <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
         {weights ? (
           <button
@@ -127,7 +112,12 @@ export default function CourseBuilder() {
       />
 
       <section className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-5">
-        <h2 className="text-sm font-semibold mb-3">Or add a course by typing</h2>
+        <h2 className="text-sm font-semibold mb-3">Add a course</h2>
+        <CourseSearch
+          onSelectCourse={(subject, course) => addCourseIfNew(subject, course, "W")}
+          addedKeys={addedKeys}
+        />
+        <p className="text-xs text-neutral-500 mb-2">Or enter it manually:</p>
         <form
           className="flex flex-wrap items-end gap-3"
           onSubmit={(e) => {
