@@ -42,6 +42,25 @@ def test_predict_rejects_empty_course_list():
     assert response.status_code == 422
 
 
+def test_predict_rejects_more_than_five_courses():
+    courses = [{"subject": "CPSC", "course": "110"}] * 6
+    response = client.post("/predict", json={"courses": courses})
+    assert response.status_code == 422
+
+
+def test_predict_accepts_five_courses():
+    courses = [
+        {"subject": "CPSC", "course": "110"},
+        {"subject": "MATH", "course": "100"},
+        {"subject": "ENGL", "course": "110"},
+        {"subject": "PHYS", "course": "101"},
+        {"subject": "CHEM", "course": "121"},
+    ]
+    response = client.post("/predict", json={"courses": courses})
+    assert response.status_code == 200
+    assert response.json()["n_courses"] == 5
+
+
 def test_predict_unknown_course_still_responds():
     response = client.post("/predict", json={"courses": [{"subject": "ZZZZ", "course": "999"}]})
     assert response.status_code == 200

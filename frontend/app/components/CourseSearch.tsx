@@ -13,9 +13,10 @@ interface Match {
 interface Props {
   onSelectCourse: (subject: string, course: string) => void;
   addedKeys: Set<string>;
+  atMax: boolean;
 }
 
-export default function CourseSearch({ onSelectCourse, addedKeys }: Props) {
+export default function CourseSearch({ onSelectCourse, addedKeys, atMax }: Props) {
   const [catalog, setCatalog] = useState<Record<string, string[]> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,8 +61,9 @@ export default function CourseSearch({ onSelectCourse, addedKeys }: Props) {
       </label>
       <input
         id="course-search"
-        placeholder="e.g. CPSC or CPSC 110"
+        placeholder={atMax ? "Max courses reached" : "e.g. CPSC or CPSC 110"}
         value={query}
+        disabled={atMax}
         onFocus={() => {
           ensureCatalogLoaded();
           setOpen(true);
@@ -71,7 +73,7 @@ export default function CourseSearch({ onSelectCourse, addedKeys }: Props) {
           setOpen(true);
         }}
         onBlur={() => setTimeout(() => setOpen(false), 150)} // let a click on a result register first
-        className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-1.5 text-sm"
+        className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-1.5 text-sm disabled:opacity-40"
         autoComplete="off"
       />
 
@@ -88,7 +90,7 @@ export default function CourseSearch({ onSelectCourse, addedKeys }: Props) {
               <li key={`${subject}-${course}`}>
                 <button
                   type="button"
-                  disabled={added}
+                  disabled={added || atMax}
                   onMouseDown={(e) => e.preventDefault()} // keep focus so onBlur doesn't beat the click
                   onClick={() => select(subject, course)}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 disabled:opacity-40 flex items-center justify-between"

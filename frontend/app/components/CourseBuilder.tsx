@@ -7,7 +7,7 @@ import TermResults from "./TermResults";
 import CourseSearch from "./CourseSearch";
 import PersonalizationQuiz from "./PersonalizationQuiz";
 
-const MAX_COURSES = 8;
+const MAX_COURSES = 5;
 
 function emptyDraft(): CourseInput {
   return { subject: "", course: "", session: "W" };
@@ -116,6 +116,7 @@ export default function CourseBuilder() {
         <CourseSearch
           onSelectCourse={(subject, course) => addCourseIfNew(subject, course, "W")}
           addedKeys={addedKeys}
+          atMax={courses.length >= MAX_COURSES}
         />
         <p className="text-xs text-neutral-500 mb-2">Or enter it manually:</p>
         <form

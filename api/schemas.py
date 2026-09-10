@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-MAX_COURSES_PER_REQUEST = 8
+MAX_COURSES_PER_REQUEST = 5
 
 
 class CourseRequest(BaseModel):
