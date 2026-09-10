@@ -82,6 +82,36 @@ class CourseCatalogResponse(BaseModel):
     )
 
 
+class CourseTermStats(BaseModel):
+    """Real stats for one specific term (year+session), not an average -
+    from data/processed/course_term_stats.parquet, which spans 1996 through
+    whatever's most recently available (currently 2025W). This is NOT the
+    same data window the predictor uses (PAIR Reports, <=2016W only) - see
+    data/README.md."""
+
+    year: int
+    session: Literal["S", "W"]
+    session_label: str = Field(..., description="'Winter' or 'Summer'")
+    available: bool = Field(..., description="False if this term's stats were privacy-suppressed/not reported")
+    enrolled: int | None = None
+    avg: float | None = None
+    std_dev: float | None = Field(
+        None, description="Not reported by the source for 2022+ terms - null, never estimated"
+    )
+    high: float | None = None
+    low: float | None = None
+    fail_rate: float | None = Field(None, description="0-100, percent of students who received a failing grade")
+    source: Literal["pair", "tableau_v1", "tableau_v2"] = Field(
+        ..., description="Which underlying data source this term's row came from"
+    )
+
+
+class CourseHistoryResponse(BaseModel):
+    subject: str
+    course: str
+    terms: list[CourseTermStats] = Field(..., description="Most recent term first")
+
+
 class PredictResponse(BaseModel):
     term_difficulty_score: float = Field(..., description="Credit-weighted average across all requested courses")
     term_personalized_score: float | None = Field(

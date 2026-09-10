@@ -51,6 +51,31 @@ def test_predict_response_includes_explanation():
         assert e["detail"]
 
 
+def test_course_history_spans_pair_and_tableau_sources():
+    response = client.get("/courses/CPSC/110/history")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["subject"] == "CPSC"
+    assert body["course"] == "110"
+    terms = body["terms"]
+    assert len(terms) > 0
+    # most recent term first
+    assert terms[0]["year"] >= terms[-1]["year"]
+    sources = {t["source"] for t in terms}
+    assert "pair" in sources
+    assert "tableau_v2" in sources  # confirms coverage extends into the 2022+ era
+    # std_dev must be honestly null for tableau_v2 terms, never fabricated
+    for t in terms:
+        if t["source"] == "tableau_v2":
+            assert t["std_dev"] is None
+
+
+def test_course_history_unknown_course_returns_empty_list():
+    response = client.get("/courses/ZZZZ/999/history")
+    assert response.status_code == 200
+    assert response.json()["terms"] == []
+
+
 def test_predict_rejects_more_than_five_courses():
     courses = [{"subject": "CPSC", "course": "110"}] * 6
     response = client.post("/predict", json={"courses": courses})

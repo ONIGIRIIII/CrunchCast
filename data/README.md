@@ -7,33 +7,44 @@ pinned to commit `18af317b9ded65047f8438b854317b4ff7fcb88d` for reproducibility
 (see `scripts/download_pair_data.py`).
 
 That repo aggregates three different upstream sources over time, with
-different reliability and schemas. We only use the first one, and only part
-of it:
+different reliability and schemas. **The prediction model uses only the
+first one** (PAIR Reports, <=2016W); the other two are used ONLY for the
+separate "view by term" history browser, never for training or prediction:
 
-| Source | Years covered | Used here? |
-|---|---|---|
-| PAIR Reports | ... up to 2019 dashboard | Yes, but only **2016W and earlier** |
-| Tableau Dashboard | 2019-2022 | No |
-| Tableau Dashboard v2 | 2022-present | No |
+| Source | Years covered (UBCV) | Used for the model? | Used for the history browser? |
+|---|---|---|---|
+| PAIR Reports | 1996S-2016W | **Yes** | Yes |
+| `tableau-dashboard` ("v1") | 2017S-2021W (2014-2016 overlap with PAIR skipped) | No | Yes |
+| `tableau-dashboard-v2` | 2022S-latest (currently 2025W) | No | Yes |
 
 The upstream repo's own README states that PAIR Reports data for 2017W
 onward was found to have been altered between June and December 2019, so it
-is not trustworthy. We take the conservative cutoff of **year <= 2016**
-(i.e. 2016W and everything before it) for both Winter (W) and Summer (S)
-sessions. This gives us 1996S through 2016W, 42 year-session terms.
+is not trustworthy **for the model** - we take the conservative cutoff of
+**year <= 2016** (i.e. 2016W and everything before it) for both Winter (W)
+and Summer (S) sessions for anything that feeds `features.parquet`. This
+gives the model 1996S through 2016W, 42 year-session terms.
 
-Only UBC Vancouver (`Campus == "UBC"`) exists in this era, so this project
-is implicitly UBC Vancouver only.
+The two Tableau-sourced folders are different, non-corrupted exports (not
+the altered PAIR data) - see "Course-term history browser" below for how
+they're used to extend the *display* window to the present without
+touching what the model trains or predicts on.
+
+Only UBC Vancouver (`Campus == "UBC"` / `"UBCV"` depending on source) exists
+across all three, so this project is implicitly UBC Vancouver only.
 
 ## Pipeline
 
 Run in order from the repo root, with the venv active:
 
 ```
-python data/scripts/download_pair_data.py   # -> data/raw/ (gitignored, ~50MB)
+python data/scripts/download_pair_data.py   # -> data/raw/pair-reports/ (gitignored, ~50MB)
 python data/scripts/clean_grades.py         # -> data/processed/sections_clean.parquet
 python data/scripts/build_features.py       # -> data/processed/features.parquet
 python data/scripts/eda.py                  # -> data/eda/summary.md + plots
+
+# History browser only (does not affect the model at all):
+python data/scripts/download_tableau_data.py  # -> data/raw/tableau-dashboard{,-v2}/ (gitignored)
+python data/scripts/clean_tableau_data.py     # -> data/processed/course_term_stats.parquet
 ```
 
 `data/processed/` and `data/eda/` are committed to the repo (they're small)
@@ -136,6 +147,38 @@ input**. All model features (`hist_course_mean_difficulty`,
 `global_running_mean_difficulty`, offering counts) are computed using only
 offerings strictly earlier in `session_order` for the relevant group. See
 `data/scripts/build_features.py::_prior_mean_and_count`.
+
+## Course-term history browser (separate from the model)
+
+`data/processed/course_term_stats.parquet` powers `GET
+/courses/{subject}/{course}/history` and the frontend's "View by term"
+panel - real per-term numbers (average, std dev, high, low, fail rate,
+enrolled) for a specific year+session, not an aggregate. It spans 1996
+through whatever's most recently available (currently 2025W), built by
+`data/scripts/clean_tableau_data.py` from three sources with different
+schemas:
+
+- **PAIR (<=2016W)**: reuses the `OVERALL` rows already in
+  `sections_clean.parquet` - has a real `Fail` count.
+- **`tableau-dashboard` v1 (2017S-2021W)**: has a real `OVERALL` row and
+  `std_dev`, but no `Fail` column - `fail_rate` is derived from the `<50`
+  grade-count bin instead (`<50 count / Enrolled`). This is a faithful
+  re-derivation from real reported bin counts, not fabricated data, but
+  may differ slightly from PAIR's own `Fail`-column definition.
+- **`tableau-dashboard-v2` (2022S+)**: has **no `OVERALL` row at all** (we
+  synthesize one per term by aggregating across that term's sections -
+  enrollment-weighted average, max/min for high/low, summed `<50` bins for
+  `fail_rate`) and **no `std_dev` statistic in the source at all**. Rather
+  than estimate one from the grade-count bins, `std_dev` is reported as
+  `null`/"not reported" for every 2022+ term - consistent with this
+  project's "don't fabricate data, stub it clearly" principle (see the
+  course metadata stub below).
+
+**This table is never read by `build_features.py`, `train.py`, or
+`predict.py`.** The prediction model only ever sees PAIR data through
+2016W; extending the *history browser's* display window to 2025W carries
+zero risk of newer, differently-sourced, or unvetted-for-modeling data
+leaking into what the model trains or predicts on.
 
 ## Course metadata stub
 

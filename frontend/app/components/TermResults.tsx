@@ -2,6 +2,7 @@ import type { PredictResponse } from "@/lib/api";
 import DifficultyBadge from "./DifficultyBadge";
 import ConfidenceNote from "./ConfidenceNote";
 import ExplanationChart from "./ExplanationChart";
+import CourseHistoryPanel from "./CourseHistoryPanel";
 
 export default function TermResults({ result }: { result: PredictResponse }) {
   const personalized = result.term_personalized_score;
@@ -70,6 +71,7 @@ export default function TermResults({ result }: { result: PredictResponse }) {
               </div>
             </div>
             <ExplanationChart explanation={c.explanation} />
+            <CourseHistoryPanel subject={c.subject} course={c.course} />
           </div>
         ))}
       </div>

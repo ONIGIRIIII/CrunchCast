@@ -50,6 +50,26 @@ export interface PredictResponse {
   courses: CoursePrediction[];
 }
 
+export interface CourseTermStats {
+  year: number;
+  session: Session;
+  session_label: string;
+  available: boolean;
+  enrolled: number | null;
+  avg: number | null;
+  std_dev: number | null;
+  high: number | null;
+  low: number | null;
+  fail_rate: number | null;
+  source: "pair" | "tableau_v1" | "tableau_v2";
+}
+
+export interface CourseHistoryResponse {
+  subject: string;
+  course: string;
+  terms: CourseTermStats[];
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {}
@@ -61,6 +81,16 @@ export async function getCourseCatalog(): Promise<Record<string, string[]>> {
   }
   const body: { subjects: Record<string, string[]> } = await response.json();
   return body.subjects;
+}
+
+export async function getCourseHistory(subject: string, course: string): Promise<CourseHistoryResponse> {
+  const response = await fetch(
+    `${API_URL}/courses/${encodeURIComponent(subject)}/${encodeURIComponent(course)}/history`
+  );
+  if (!response.ok) {
+    throw new ApiError(`Failed to load course history (${response.status})`);
+  }
+  return response.json();
 }
 
 export async function predictTerm(

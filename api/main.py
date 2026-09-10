@@ -13,13 +13,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from model_service import get_catalog, get_predictor, predict_term
-from schemas import CourseCatalogResponse, PredictRequest, PredictResponse
+from model_service import get_catalog, get_course_history, get_history_provider, get_predictor, predict_term
+from schemas import CourseCatalogResponse, CourseHistoryResponse, PredictRequest, PredictResponse
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    get_predictor()  # load the model at startup, not on the first request
+    get_predictor()  # load the model + history table at startup, not on the first request
+    get_history_provider()
     yield
 
 
@@ -59,6 +60,18 @@ def courses():
     browse-by-subject UI. Not an authoritative course catalog - see
     data/README.md for what this data source is and isn't."""
     return {"subjects": get_catalog()}
+
+
+@app.get("/courses/{subject}/{course}/history", response_model=CourseHistoryResponse)
+def course_history(subject: str, course: str):
+    """Real per-term stats for a course (avg, std dev, high, low, fail
+    rate, enrolled), most recent term first, spanning 1996 through whatever
+    is most recently available (currently 2025W). NOT the same data window
+    the predictor uses (PAIR Reports, <=2016W only) - see data/README.md
+    for why the predictor and this history browser cover different ranges.
+    """
+    terms = get_course_history(subject, course)
+    return {"subject": subject.strip().upper(), "course": course.strip().upper(), "terms": terms}
 
 
 @app.post("/predict", response_model=PredictResponse)
