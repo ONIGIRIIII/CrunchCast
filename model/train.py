@@ -3,10 +3,10 @@
 Two things happen here, kept deliberately separate:
 
 1. Honest evaluation: split chronologically (train through 2013W, test on
-   2014-2016), fit a heuristic baseline and a LightGBM model on train only,
+   2014-2016), fit a heuristic baseline and an XGBoost model on train only,
    and score both on the untouched test set. This is what
    evaluate.py reports on.
-2. Deployable artifact: after evaluation, refit the same LightGBM config on
+2. Deployable artifact: after evaluation, refit the same XGBoost config on
    ALL available data (1996-2016) so the shipped model uses every bit of
    history we have. This is standard practice, but it means the model that
    actually serves predictions was NOT the one evaluated above - the
@@ -21,12 +21,17 @@ import json
 import sys
 from pathlib import Path
 
-import lightgbm as lgb
 import pandas as pd
+import xgboost as xgb
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "data" / "scripts"))
-from feature_spec import CATEGORICAL_FEATURE_COLS, FEATURE_COLS, LABEL_COL  # noqa: E402
+from feature_spec import (  # noqa: E402
+    CATEGORICAL_FEATURE_COLS,
+    COMPONENT_SCORE_COLS,
+    FEATURE_COLS,
+    LABEL_COL,
+)
 
 FEATURES_PATH = REPO_ROOT / "data" / "processed" / "features.parquet"
 ARTIFACTS_DIR = REPO_ROOT / "model" / "artifacts"
@@ -37,42 +42,40 @@ ARTIFACTS_DIR = REPO_ROOT / "model" / "artifacts"
 INNER_TRAIN_CUTOFF = 2011 * 2 + 1  # through 2011W
 TEST_CUTOFF = 2013 * 2 + 1  # through 2013W -> everything after is the test set
 
-LGB_PARAMS = {
-    "objective": "regression",
-    "metric": "mae",
-    "num_leaves": 31,
+# grow_policy="lossguide" + max_leaves mirrors LightGBM's leaf-wise growth
+# (this project's original config, kept for continuity after the LightGBM ->
+# XGBoost swap rather than re-tuning from scratch).
+XGB_PARAMS = {
+    "objective": "reg:squarederror",
+    "eval_metric": "mae",
+    "tree_method": "hist",
+    "grow_policy": "lossguide",
+    "max_leaves": 31,
     "learning_rate": 0.05,
-    "min_child_samples": 20,
-    "feature_fraction": 0.8,
-    "bagging_fraction": 0.8,
-    "bagging_freq": 1,
-    "verbose": -1,
+    "min_child_weight": 20,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
 }
 MAX_ROUNDS = 2000
 EARLY_STOPPING_ROUNDS = 50
 
 
-def make_dataset(df: pd.DataFrame, reference: lgb.Dataset = None) -> lgb.Dataset:
-    return lgb.Dataset(
-        df[FEATURE_COLS],
-        label=df[LABEL_COL],
-        categorical_feature=CATEGORICAL_FEATURE_COLS,
-        reference=reference,
-        free_raw_data=False,
-    )
+def make_dmatrix(df: pd.DataFrame, label_col: str = LABEL_COL) -> xgb.DMatrix:
+    return xgb.DMatrix(df[FEATURE_COLS], label=df[label_col], enable_categorical=True)
 
 
 def fit_with_early_stopping(inner_train: pd.DataFrame, inner_valid: pd.DataFrame) -> int:
     """Finds a good boosting round count on a held-out inner slice, chronologically
     before the real test set, so the real test set is never used for tuning."""
-    train_set = make_dataset(inner_train)
-    valid_set = make_dataset(inner_valid, reference=train_set)
-    booster = lgb.train(
-        LGB_PARAMS,
-        train_set,
+    train_matrix = make_dmatrix(inner_train)
+    valid_matrix = make_dmatrix(inner_valid)
+    booster = xgb.train(
+        XGB_PARAMS,
+        train_matrix,
         num_boost_round=MAX_ROUNDS,
-        valid_sets=[valid_set],
-        callbacks=[lgb.early_stopping(EARLY_STOPPING_ROUNDS, verbose=False)],
+        evals=[(valid_matrix, "valid")],
+        early_stopping_rounds=EARLY_STOPPING_ROUNDS,
+        verbose_eval=False,
     )
     return booster.best_iteration
 
@@ -99,7 +102,14 @@ def compute_current_stats(features: pd.DataFrame):
     available rows - there's no leakage concern here since we're not
     scoring any historical row, we're estimating a course's difficulty as
     of today, for a term beyond the end of our dataset.
+
+    Also aggregates the four personalization components (COMPONENT_SCORE_COLS)
+    the same way - these are never used as training features (see
+    feature_spec.py), only as plain historical lookups for personalized
+    scoring in model/predict.py.
     """
+    component_aggs = {f"current_mean_{col}": (col, "mean") for col in COMPONENT_SCORE_COLS}
+
     course_stats = (
         features.groupby(["subject", "course"], observed=True)
         .agg(
@@ -108,6 +118,7 @@ def compute_current_stats(features: pd.DataFrame):
             current_mean_enrolled=("enrolled", "mean"),
             course_level=("course_level", "last"),
             credits=("credits", "last"),
+            **component_aggs,
         )
         .reset_index()
     )
@@ -116,6 +127,7 @@ def compute_current_stats(features: pd.DataFrame):
         .agg(
             current_mean_difficulty=(LABEL_COL, "mean"),
             current_offerings_count=(LABEL_COL, "size"),
+            **component_aggs,
         )
         .reset_index()
     )
@@ -135,20 +147,20 @@ def main():
     best_iteration = fit_with_early_stopping(inner_train, inner_valid)
     print(f"best_iteration (from inner validation) = {best_iteration}")
 
-    eval_train_set = make_dataset(train)
-    eval_model = lgb.train(LGB_PARAMS, eval_train_set, num_boost_round=best_iteration)
+    eval_train_matrix = make_dmatrix(train)
+    eval_model = xgb.train(XGB_PARAMS, eval_train_matrix, num_boost_round=best_iteration)
 
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     test = test.copy()
     test["pred_baseline"] = baseline_predict(test)
-    test["pred_lightgbm"] = eval_model.predict(test[FEATURE_COLS])
+    test["pred_xgboost"] = eval_model.predict(make_dmatrix(test))
     test.to_parquet(ARTIFACTS_DIR / "test_predictions.parquet", index=False)
 
     # Deployable model: same config, refit on everything, so the API serves
     # predictions informed by the full 1996-2016 history, not just pre-2014 data.
-    full_set = make_dataset(features)
-    final_model = lgb.train(LGB_PARAMS, full_set, num_boost_round=best_iteration)
-    final_model.save_model(str(ARTIFACTS_DIR / "lightgbm_model.txt"))
+    full_matrix = make_dmatrix(features)
+    final_model = xgb.train(XGB_PARAMS, full_matrix, num_boost_round=best_iteration)
+    final_model.save_model(str(ARTIFACTS_DIR / "xgboost_model.json"))
 
     course_stats, subject_stats = compute_current_stats(features)
     course_stats.to_parquet(ARTIFACTS_DIR / "current_course_stats.parquet", index=False)
@@ -158,15 +170,26 @@ def main():
         "feature_cols": FEATURE_COLS,
         "categorical_feature_cols": CATEGORICAL_FEATURE_COLS,
         "label_col": LABEL_COL,
-        "lgb_params": LGB_PARAMS,
+        "xgb_params": XGB_PARAMS,
         "best_iteration": best_iteration,
         "eval_test_cutoff_session_order": TEST_CUTOFF,
         "eval_inner_train_cutoff_session_order": INNER_TRAIN_CUTOFF,
         "n_train_rows_eval_model": len(train),
         "n_train_rows_final_model": len(features),
         "global_mean_difficulty": float(features[LABEL_COL].mean()),
+        "global_mean_component": {col: float(features[col].mean()) for col in COMPONENT_SCORE_COLS},
+        # XGBoost's categorical support (unlike LightGBM's) errors on a
+        # category value it never saw during training, instead of handling
+        # it gracefully. So at inference time we align incoming categorical
+        # columns to exactly this training vocabulary (model/predict.py) -
+        # an unseen subject/course_level becomes a missing value, which
+        # XGBoost DOES handle natively, falling back on the historical
+        # numeric features (subject/global means) instead of category identity.
+        "categorical_categories": {
+            col: features[col].cat.categories.tolist() for col in CATEGORICAL_FEATURE_COLS
+        },
         "note": (
-            "final_model (lightgbm_model.txt) is trained on ALL rows and is what "
+            "final_model (xgboost_model.json) is trained on ALL rows and is what "
             "the API serves. Evaluation metrics in model/reports/evaluation_report.md "
             "come from eval_model, trained only on pre-2014 data, so they are a "
             "lower-bound estimate of the shipped model's quality, not a live score "

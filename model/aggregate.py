@@ -38,7 +38,7 @@ def aggregate_term(course_predictions: list[dict]) -> dict:
         if c["confidence"] in LOW_CONFIDENCE_LEVELS
     ]
 
-    return {
+    result = {
         "term_difficulty_score": round(term_difficulty_score, 1),
         "total_credits": total_credits,
         "n_courses": len(course_predictions),
@@ -51,3 +51,20 @@ def aggregate_term(course_predictions: list[dict]) -> dict:
         "low_confidence_courses": low_confidence_courses,
         "courses": course_predictions,
     }
+
+    # personalized_score is only present on each course dict when the caller
+    # passed weights to predict_one() (see model/predict.py); mirror that
+    # optionality at the term level instead of always emitting a field that
+    # is meaningless without a quiz having been taken.
+    if all("personalized_score" in c for c in course_predictions):
+        if total_credits > 0:
+            term_personalized_score = sum(
+                c["personalized_score"] * c["credits"] for c in course_predictions
+            ) / total_credits
+        else:
+            term_personalized_score = sum(
+                c["personalized_score"] for c in course_predictions
+            ) / len(course_predictions)
+        result["term_personalized_score"] = round(term_personalized_score, 1)
+
+    return result

@@ -25,11 +25,14 @@ def get_catalog() -> dict[str, list[str]]:
     return get_predictor().list_catalog()
 
 
-def predict_term(course_requests) -> dict:
+def predict_term(course_requests, weights=None) -> dict:
     """course_requests: iterable of objects with .subject, .course, .session
-    (schemas.CourseRequest instances)."""
+    (schemas.CourseRequest instances). weights: schemas.Weights instance or
+    None - same weights applied to every course in the request."""
     predictor = get_predictor()
+    weights_dict = weights.model_dump() if weights is not None else None
     predictions = [
-        predictor.predict_one(c.subject, c.course, c.session) for c in course_requests
+        predictor.predict_one(c.subject, c.course, c.session, weights=weights_dict)
+        for c in course_requests
     ]
     return aggregate_term(predictions)

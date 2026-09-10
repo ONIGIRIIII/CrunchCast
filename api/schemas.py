@@ -15,8 +15,26 @@ class CourseRequest(BaseModel):
     )
 
 
+class Weights(BaseModel):
+    """Relative importance of the four real historical signals, produced by
+    the frontend's personalization quiz. Need not sum to 1 - normalized
+    server-side (model/predict.py). All-zero falls back to equal weights."""
+
+    grade: float = Field(0.25, ge=0, description="GPA/grade impact")
+    failrisk: float = Field(0.25, ge=0, description="Risk of failing/retaking")
+    variance: float = Field(0.25, ge=0, description="Grading unpredictability")
+    classsize: float = Field(0.25, ge=0, description="Number of people taking the course")
+
+
 class PredictRequest(BaseModel):
     courses: list[CourseRequest] = Field(..., min_length=1, max_length=MAX_COURSES_PER_REQUEST)
+    weights: Weights | None = Field(
+        None,
+        description=(
+            "Optional personalization weights, same set applied to every course in "
+            "the request. Omit to get only the objective difficulty_score."
+        ),
+    )
 
 
 class CoursePrediction(BaseModel):
@@ -24,6 +42,14 @@ class CoursePrediction(BaseModel):
     course: str
     difficulty_score: float = Field(
         ..., description="0-100, higher = historically harder. A proxy for workload, not a direct measurement - see README."
+    )
+    personalized_score: float | None = Field(
+        None,
+        description=(
+            "0-100, weighted combination of grade/fail-risk/variance/class-size "
+            "history using the request's `weights`. Only present when `weights` "
+            "was supplied."
+        ),
     )
     confidence: Literal["high", "medium", "low", "very_low"] = Field(
         ..., description="How much historical data backs this prediction"
@@ -46,6 +72,9 @@ class CourseCatalogResponse(BaseModel):
 
 class PredictResponse(BaseModel):
     term_difficulty_score: float = Field(..., description="Credit-weighted average across all requested courses")
+    term_personalized_score: float | None = Field(
+        None, description="Credit-weighted average of personalized_score; only present when `weights` was supplied"
+    )
     total_credits: int
     n_courses: int
     n_high_difficulty_courses: int

@@ -7,6 +7,15 @@ never drift out of sync about column names.
 
 LABEL_COL = "difficulty_score"
 
+# Personalization signals (see model/predict.py CourseDifficultyPredictor.
+# predict_one's `weights` argument): same percentile-rank recipe as
+# difficulty_score, but kept separate so a "crunch" score can be a
+# per-request weighted recombination of these instead of one fixed blend.
+# NEVER used as model training features - only ever aggregated into the
+# full-history lookup tables (model/train.py::compute_current_stats) that
+# already back live inference's historical fallback chain.
+COMPONENT_SCORE_COLS = ["grade_score", "failrisk_score", "variance_score", "classsize_score"]
+
 # Columns the model is actually allowed to train on. Every one of these must
 # be computable before a future offering happens (see build_features.py for
 # how the historical/rolling ones are computed without leaking future data).

@@ -3,15 +3,26 @@ import DifficultyBadge from "./DifficultyBadge";
 import ConfidenceNote from "./ConfidenceNote";
 
 export default function TermResults({ result }: { result: PredictResponse }) {
+  const personalized = result.term_personalized_score;
+
   return (
     <section className="flex flex-col gap-5">
       <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-5">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-neutral-500">Term risk readout</h2>
-            <p className="text-3xl font-bold mt-1">{result.term_difficulty_score.toFixed(0)} / 100</p>
+            <h2 className="text-sm font-semibold text-neutral-500">
+              {personalized != null ? "Your crunch score" : "Term risk readout"}
+            </h2>
+            <p className="text-3xl font-bold mt-1">
+              {(personalized ?? result.term_difficulty_score).toFixed(0)} / 100
+            </p>
+            {personalized != null && (
+              <p className="text-xs text-neutral-500 mt-1">
+                Objective historical score: {result.term_difficulty_score.toFixed(0)} / 100
+              </p>
+            )}
           </div>
-          <DifficultyBadge score={result.term_difficulty_score} />
+          <DifficultyBadge score={personalized ?? result.term_difficulty_score} />
         </div>
         <dl className="mt-4 grid grid-cols-3 gap-4 text-sm">
           <div>
@@ -45,19 +56,24 @@ export default function TermResults({ result }: { result: PredictResponse }) {
               </p>
               <ConfidenceNote confidence={c.confidence} />
             </div>
-            <div className="flex items-center gap-4 text-sm text-neutral-500">
+            <div className="flex items-center gap-3 text-sm text-neutral-500">
               <span>{c.credits} cr</span>
-              <DifficultyBadge score={c.difficulty_score} />
+              {c.personalized_score != null && (
+                <span className="text-xs text-neutral-400">objective {c.difficulty_score.toFixed(0)}</span>
+              )}
+              <DifficultyBadge score={c.personalized_score ?? c.difficulty_score} />
             </div>
           </div>
         ))}
       </div>
 
       <p className="text-xs text-neutral-500 dark:text-neutral-400">
-        Difficulty scores are a proxy built from historical UBC grade outcomes (2016W and earlier):
-        lower average grade, higher fail rate, and higher grade variance push a score up. This is not
-        a direct measurement of workload - a generously-graded but time-consuming course can still
-        score as &quot;easy&quot; here. See the project README for details and limitations.
+        {personalized != null
+          ? "Your crunch score is a weighted combination of four real historical signals (grade impact, fail risk, grading unpredictability, class size), weighted by your quiz answers. "
+          : "Difficulty scores are a proxy built from historical UBC grade outcomes (2016W and earlier): lower average grade, higher fail rate, and higher grade variance push a score up. "}
+        This is not a direct measurement of workload - a generously-graded but time-consuming
+        course can still score as &quot;easy&quot; here. See the project README for details and
+        limitations.
       </p>
     </section>
   );

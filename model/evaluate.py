@@ -31,12 +31,15 @@ def metrics_for(y_true, y_pred) -> dict:
 
 
 def feature_importance_table(metadata: dict) -> pd.DataFrame:
-    import lightgbm as lgb
+    import xgboost as xgb
 
-    booster = lgb.Booster(model_file=str(ARTIFACTS_DIR / "lightgbm_model.txt"))
-    gains = booster.feature_importance(importance_type="gain")
-    names = booster.feature_name()
-    table = pd.DataFrame({"feature": names, "gain": gains})
+    booster = xgb.Booster()
+    booster.load_model(str(ARTIFACTS_DIR / "xgboost_model.json"))
+    gain_by_feature = booster.get_score(importance_type="gain")  # omits unused features
+    table = pd.DataFrame(
+        {"feature": metadata["feature_cols"]}
+    )
+    table["gain"] = table["feature"].map(gain_by_feature).fillna(0.0)
     table["gain_pct"] = 100 * table["gain"] / table["gain"].sum()
     return table.sort_values("gain_pct", ascending=False)
 
@@ -47,12 +50,12 @@ def main():
 
     y_true = test[LABEL_COL]
     baseline_metrics = metrics_for(y_true, test["pred_baseline"])
-    lgbm_metrics = metrics_for(y_true, test["pred_lightgbm"])
+    xgb_metrics = metrics_for(y_true, test["pred_xgboost"])
 
     test = test.copy()
-    test["abs_error_lgbm"] = (test[LABEL_COL] - test["pred_lightgbm"]).abs()
+    test["abs_error_xgb"] = (test[LABEL_COL] - test["pred_xgboost"]).abs()
     by_subject = (
-        test.groupby("subject", observed=True)["abs_error_lgbm"]
+        test.groupby("subject", observed=True)["abs_error_xgb"]
         .agg(["mean", "count"])
         .rename(columns={"mean": "mean_abs_error"})
     )
@@ -63,12 +66,12 @@ def main():
         "mean_abs_error"
     ).head(10)
 
-    by_level = test.groupby("course_level", observed=True)["abs_error_lgbm"].agg(["mean", "count"])
+    by_level = test.groupby("course_level", observed=True)["abs_error_xgb"].agg(["mean", "count"])
 
-    worst_rows = test.sort_values("abs_error_lgbm", ascending=False).head(15)
+    worst_rows = test.sort_values("abs_error_xgb", ascending=False).head(15)
     worst_cols = [
         "year", "session", "subject", "course", "section",
-        LABEL_COL, "pred_lightgbm", "pred_baseline", "abs_error_lgbm",
+        LABEL_COL, "pred_xgboost", "pred_baseline", "abs_error_xgb",
         "hist_course_offerings_count",
     ]
 
@@ -107,12 +110,12 @@ def main():
         f"{baseline_metrics['R2']:.3f} |\n"
     )
     lines.append(
-        f"| LightGBM | {lgbm_metrics['MAE']:.2f} | {lgbm_metrics['RMSE']:.2f} | "
-        f"{lgbm_metrics['R2']:.3f} |\n"
+        f"| XGBoost | {xgb_metrics['MAE']:.2f} | {xgb_metrics['RMSE']:.2f} | "
+        f"{xgb_metrics['R2']:.3f} |\n"
     )
-    improvement = 100 * (1 - lgbm_metrics["MAE"] / baseline_metrics["MAE"])
+    improvement = 100 * (1 - xgb_metrics["MAE"] / baseline_metrics["MAE"])
     lines.append(
-        f"\nLightGBM reduces MAE by {improvement:.1f}% versus the heuristic "
+        f"\nXGBoost reduces MAE by {improvement:.1f}% versus the heuristic "
         "baseline, i.e. it's better than just looking up a course's own "
         "trailing history, but not by a huge margin. That's expected: most "
         "of the signal in this proxy label IS a course/subject's own "
@@ -187,7 +190,7 @@ def main():
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     (REPORTS_DIR / "evaluation_report.md").write_text("".join(lines), encoding="utf-8")
     print(f"Wrote {REPORTS_DIR / 'evaluation_report.md'}")
-    print(f"Baseline MAE={baseline_metrics['MAE']:.2f}  LightGBM MAE={lgbm_metrics['MAE']:.2f}")
+    print(f"Baseline MAE={baseline_metrics['MAE']:.2f}  XGBoost MAE={xgb_metrics['MAE']:.2f}")
 
 
 if __name__ == "__main__":

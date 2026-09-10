@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ApiError, predictTerm, type CourseInput, type PredictResponse, type Session } from "@/lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { ApiError, predictTerm, type CourseInput, type PredictResponse, type Session, type Weights } from "@/lib/api";
+import { clearWeights, loadWeights } from "@/lib/weights";
 import TermResults from "./TermResults";
 import CourseNavSidebar from "./CourseNavSidebar";
+import PersonalizationQuiz from "./PersonalizationQuiz";
 
 const MAX_COURSES = 8;
 
@@ -18,6 +20,16 @@ export default function CourseBuilder() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [weights, setWeights] = useState<Weights | null>(null);
+
+  useEffect(() => {
+    // Reading localStorage on mount (not a "real" derived-state effect, but
+    // deliberately deferred past the initial render so server and client
+    // render the same "no weights yet" output before hydration).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setWeights(loadWeights());
+  }, []);
 
   const addedKeys = useMemo(
     () => new Set(courses.map((c) => `${c.subject}-${c.course}`)),
@@ -49,7 +61,7 @@ export default function CourseBuilder() {
     setLoading(true);
     setError(null);
     try {
-      const response = await predictTerm(courses);
+      const response = await predictTerm(courses, weights);
       setResult(response);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong reaching the API.");
@@ -72,6 +84,46 @@ export default function CourseBuilder() {
         onClose={() => setSidebarOpen(false)}
         onSelectCourse={(subject, course) => addCourseIfNew(subject, course, "W")}
         addedKeys={addedKeys}
+      />
+
+      <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
+        {weights ? (
+          <button
+            onClick={() => setQuizOpen(true)}
+            className="rounded-md border border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-3 py-1.5 text-sm font-medium shadow-sm"
+          >
+            Personalized ✓ (retake)
+          </button>
+        ) : (
+          <button
+            onClick={() => setQuizOpen(true)}
+            className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm font-medium shadow-sm"
+          >
+            Personalize your crunch score
+          </button>
+        )}
+        {weights && (
+          <button
+            onClick={() => {
+              clearWeights();
+              setWeights(null);
+              setResult(null);
+            }}
+            className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+          >
+            clear
+          </button>
+        )}
+      </div>
+
+      <PersonalizationQuiz
+        open={quizOpen}
+        onClose={() => setQuizOpen(false)}
+        onComplete={(newWeights) => {
+          setWeights(newWeights);
+          setQuizOpen(false);
+          setResult(null);
+        }}
       />
 
       <section className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-5">

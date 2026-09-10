@@ -8,10 +8,18 @@ export interface CourseInput {
 
 export type Confidence = "high" | "medium" | "low" | "very_low";
 
+export interface Weights {
+  grade: number;
+  failrisk: number;
+  variance: number;
+  classsize: number;
+}
+
 export interface CoursePrediction {
   subject: string;
   course: string;
   difficulty_score: number;
+  personalized_score: number | null;
   confidence: Confidence;
   historical_offerings_count: number;
   credits: number;
@@ -19,6 +27,7 @@ export interface CoursePrediction {
 
 export interface PredictResponse {
   term_difficulty_score: number;
+  term_personalized_score: number | null;
   total_credits: number;
   n_courses: number;
   n_high_difficulty_courses: number;
@@ -44,11 +53,14 @@ export async function getCourseCatalog(): Promise<Record<string, string[]>> {
   return body.subjects;
 }
 
-export async function predictTerm(courses: CourseInput[]): Promise<PredictResponse> {
+export async function predictTerm(
+  courses: CourseInput[],
+  weights?: Weights | null
+): Promise<PredictResponse> {
   const response = await fetch(`${API_URL}/predict`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ courses }),
+    body: JSON.stringify(weights ? { courses, weights } : { courses }),
   });
 
   if (!response.ok) {

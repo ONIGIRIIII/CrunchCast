@@ -21,10 +21,15 @@ root). Docs at `http://127.0.0.1:8000/docs`.
 - `GET /courses` - `{"subjects": {"CPSC": ["100", "110", ...], ...}}`, every
   subject/course pair we have historical data for. Powers the frontend's
   browse-by-subject sidebar.
-- `POST /predict` - body: `{"courses": [{"subject": "CPSC", "course": "110", "session": "W"}, ...]}`
-  (1-8 courses, `session` optional, defaults to `"W"`). Returns per-course
-  difficulty plus a credit-weighted term-level score. See `schemas.py` for
-  the full response shape.
+- `POST /predict` - body: `{"courses": [{"subject": "CPSC", "course": "110", "session": "W"}, ...], "weights": {...}}`
+  (1-8 courses, `session` optional, defaults to `"W"`; `weights` optional).
+  Returns per-course difficulty plus a credit-weighted term-level score.
+  `weights` is `{grade, failrisk, variance, classsize}` (each >= 0, need not
+  sum to 1) - when present, every course/term response also includes a
+  `personalized_score` / `term_personalized_score`, a weighted combination
+  of four real historical signals (not a retrained model - see
+  `model/predict.py`'s module docstring). See `schemas.py` for the full
+  request/response shape.
 
 ## Config
 

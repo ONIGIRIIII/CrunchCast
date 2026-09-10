@@ -91,6 +91,28 @@ generous grading (low difficulty_score by this definition), or light
 workload but a harsh curve (high difficulty_score). This limitation is
 also called out in the top-level README.
 
+## Personalization signals
+
+`difficulty_score` blends grade average, fail rate, and grade variance with
+one fixed, equal weighting. Not every student weighs those the same way, so
+`build_features.py` also computes four separate 0-100 percentile-rank
+columns - `grade_score`, `failrisk_score`, `variance_score`, and
+`classsize_score` (percentile rank of `enrolled`, under the documented
+assumption that a bigger class reads as more "crunch" for many students) -
+one per real signal, instead of blending them.
+
+**These are never used as model training features.** They're only
+aggregated into the full-history lookup tables in
+`model/train.py::compute_current_stats`, which `model/predict.py` already
+uses for the objective score's historical fallback. At request time, a
+user's quiz answers become weights over these four numbers, combined with
+plain arithmetic - not a retrained model. There's no per-user ground truth
+to train a model against (nobody has rated their personal "crunch"
+experience across the historical dataset), so this is a transparent
+re-weighting of real historical numbers rather than new machine learning.
+See `model/predict.py`'s module docstring and `WEIGHT_TO_COMPONENT` for the
+implementation.
+
 ## Leakage rule for features
 
 The label for a given offering is built from that same offering's own

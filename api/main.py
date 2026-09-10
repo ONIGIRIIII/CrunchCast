@@ -64,6 +64,6 @@ def courses():
 @app.post("/predict", response_model=PredictResponse)
 def predict(request: PredictRequest):
     try:
-        return predict_term(request.courses)
+        return predict_term(request.courses, weights=request.weights)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

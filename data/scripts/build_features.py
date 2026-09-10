@@ -55,6 +55,25 @@ def add_difficulty_label(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def add_component_scores(df: pd.DataFrame) -> pd.DataFrame:
+    """The four individual signals difficulty_score blends together, kept as
+    separate 0-100 percentile-rank columns so a personalized "crunch" score
+    can weight them differently per user (see model/predict.py). Same
+    full-corpus percentile-rank recipe as difficulty_score, applied to one
+    raw column each instead of a z-scored composite.
+
+    classsize_score treats a BIGGER class as a higher score - documented
+    assumption (large/anonymous classes read as more "crunch" for many
+    students), not a fact; a user who disagrees can weight it near zero.
+    """
+    df = df.copy()
+    df["grade_score"] = (-df["avg"]).rank(pct=True) * 100
+    df["failrisk_score"] = df["fail_rate"].rank(pct=True) * 100
+    df["variance_score"] = df["std_dev"].rank(pct=True) * 100
+    df["classsize_score"] = df["enrolled"].rank(pct=True) * 100
+    return df
+
+
 def _prior_mean_and_count(df: pd.DataFrame, group_cols, value_col: str):
     """For each row, the mean and count of value_col among strictly earlier
     rows (by the df's current order) in the same group. Vectorized via
@@ -107,6 +126,7 @@ def add_static_features(df: pd.DataFrame, metadata: StaticCSVMetadataProvider) -
 def main():
     sections = load_gradeable_sections()
     sections = add_difficulty_label(sections)
+    sections = add_component_scores(sections)
     sections = add_historical_features(sections)
     metadata = StaticCSVMetadataProvider(METADATA_PATH)
     sections = add_static_features(sections, metadata)
