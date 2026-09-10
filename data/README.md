@@ -81,9 +81,22 @@ sections into one course-level row for that term.
 
 There is no real "workload" label. We build `difficulty_score` (0-100,
 higher = harder) as a composite of that section's own average grade, fail
-rate, and grade standard deviation, z-scored across the full corpus and
-converted to a percentile rank. See `scripts/build_features.py` for the
+rate, and grade standard deviation, z-scored and converted to a percentile
+rank **within course_level** (100/200/.../600) - not across the whole
+catalog. See `scripts/build_features.py::add_difficulty_label` for the
 exact formula.
+
+**Why within-level, not global:** we checked mean `difficulty_score` by
+level on this dataset and it was ~70 for 100-level courses vs. ~18-20 for
+500/600-level - the catalog is dominated by generously-graded grad and
+professional-program offerings. Ranking a 100-level course against that
+whole pool made almost every popular intro course (CPSC 110, MATH 100,
+ENGL 110, ...) look "hard" by construction, which isn't the comparison a
+student choosing between intro courses actually cares about. Ranking
+within course_level means a score reflects how a course compares to its
+real peers, and the MAE in `model/reports/evaluation_report.md` is
+noticeably higher as a direct, honest consequence of removing that
+easy-to-predict-but-not-useful signal.
 
 **This is a proxy for difficulty inferred from grade outcomes, not a
 measurement of workload.** A course could have heavy weekly workload but
@@ -96,10 +109,11 @@ also called out in the top-level README.
 `difficulty_score` blends grade average, fail rate, and grade variance with
 one fixed, equal weighting. Not every student weighs those the same way, so
 `build_features.py` also computes four separate 0-100 percentile-rank
-columns - `grade_score`, `failrisk_score`, `variance_score`, and
-`classsize_score` (percentile rank of `enrolled`, under the documented
-assumption that a bigger class reads as more "crunch" for many students) -
-one per real signal, instead of blending them.
+columns (also within course_level, same reasoning as above) -
+`grade_score`, `failrisk_score`, `variance_score`, and `classsize_score`
+(percentile rank of `enrolled`, under the documented assumption that a
+bigger class reads as more "crunch" for many students) - one per real
+signal, instead of blending them.
 
 **These are never used as model training features.** They're only
 aggregated into the full-history lookup tables in
