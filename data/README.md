@@ -196,6 +196,18 @@ columns underneath it, which would double-count. See `grade_bins.py`.
 zero risk of newer, differently-sourced, or unvetted-for-modeling data
 leaking into what the model trains or predicts on.
 
+**Search catalog bug fix**: `GET /courses` (the frontend's course search)
+originally only listed courses from the predictor's own PAIR-era catalog
+(`current_course_stats.parquet`, built from `model/train.py`), so a course
+introduced after 2016W - e.g. CPSC 330, first offered 2019W per this
+table - had zero PAIR-era offerings and was completely unsearchable, even
+though it has real history-browser data and the predictor can still score
+it via subject/global fallback. Fixed in
+`api/model_service.py::get_catalog` by unioning the predictor's catalog
+with `CourseHistoryProvider.list_catalog()` (every subject/course pair in
+this table), so any course either data window knows about now shows up in
+search.
+
 ## Per-term instructor stats and "best pick this term" (also separate from the model)
 
 `data/processed/course_section_stats.parquet`, built by

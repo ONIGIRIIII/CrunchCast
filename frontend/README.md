@@ -22,6 +22,11 @@ from `api/`).
   owns personalization state, calls the API.
 - `app/components/CourseSearch.tsx` - search-as-you-type autocomplete over
   `GET /courses`, with manual subject/course/session fields as a fallback.
+  `GET /courses` is the union of the predictor's PAIR-era catalog and the
+  history browser's wider one (see `data/README.md`'s "Search catalog bug
+  fix"), so a course introduced after 2016W (e.g. CPSC 330) is searchable
+  here even though the predictor falls back to subject/global estimates
+  for it.
 - `app/components/PersonalizationQuiz.tsx` - 8-question quiz that turns
   answers into weights (`lib/weights.ts`), saved to `localStorage`.
 - `app/components/TermResults.tsx` - term readout + per-course breakdown.
@@ -88,6 +93,9 @@ from `api/`).
   badge - distinct from Overall's combined 82.5% for the same instructor -
   the section's own grade distribution chart rendering alongside it
   (confirmed visually smaller/different from the term's blended
-  distribution, not the same chart repeated), and an unknown-course request
-  (falls back to "very low confidence" with a low-confidence warning
-  banner).
+  distribution, not the same chart repeated), search now correctly finding
+  a course introduced after 2016W (CPSC 330, previously missing from the
+  catalog entirely - predicted with an honest low-confidence banner, and
+  its full 2019W-2025W term history shown correctly), and an
+  unknown-course request (falls back to "very low confidence" with a
+  low-confidence warning banner).

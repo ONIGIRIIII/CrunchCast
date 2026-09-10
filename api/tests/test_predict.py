@@ -24,6 +24,20 @@ def test_courses_catalog():
     assert "110" in subjects["CPSC"]
 
 
+def test_courses_catalog_includes_courses_introduced_after_2016():
+    """CPSC 330 was first offered in 2019 (per the Tableau history data),
+    so it has zero PAIR-era (<=2016W) offerings and is absent from the
+    predictor's own catalog - it must still appear here, sourced from the
+    history browser's wider catalog, or it's unsearchable in the frontend
+    even though /courses/CPSC/330/history has real data for it."""
+    response = client.get("/courses")
+    subjects = response.json()["subjects"]
+    assert "330" in subjects["CPSC"]
+
+    history = client.get("/courses/CPSC/330/history").json()
+    assert len(history["terms"]) > 0
+
+
 def test_predict_known_courses():
     response = client.post(
         "/predict",

@@ -68,6 +68,18 @@ class CourseHistoryProvider:
         self._stats = stats.sort_values("session_order", ascending=False)
         self._sections = pd.read_parquet(course_section_stats_path)
 
+    def list_catalog(self) -> dict[str, list[str]]:
+        """All (subject, course) pairs with ANY term-history data
+        (1996-2025), regardless of whether the predictor has PAIR-era
+        (<=2016W) offerings for them. Merged with the predictor's own,
+        narrower catalog in api/model_service.py::get_catalog() - see that
+        function's docstring for why courses introduced after 2016 need
+        this table to show up in search at all."""
+        catalog: dict[str, list[str]] = {}
+        for subject, group in self._stats.groupby("subject"):
+            catalog[subject] = sorted(group["course"].unique().tolist())
+        return catalog
+
     def _sections_for_term(self, subject: str, course: str, year: int, session: str) -> list[dict]:
         rows = self._sections[
             (self._sections["subject"] == subject)

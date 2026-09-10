@@ -19,8 +19,15 @@ root). Docs at `http://127.0.0.1:8000/docs`.
 
 - `GET /health` - liveness check.
 - `GET /courses` - `{"subjects": {"CPSC": ["100", "110", ...], ...}}`, every
-  subject/course pair we have historical data for. Powers the frontend's
-  course search autocomplete.
+  subject/course pair we have ANY historical data for. Powers the
+  frontend's course search autocomplete. This is the union of the
+  predictor's own PAIR-era (<=2016W) catalog and the history browser's
+  wider (1996-2025) catalog - a course introduced after 2016 (e.g.
+  CPSC 330, first offered 2019W) has zero PAIR-era offerings and would be
+  missing from search entirely if this only used the predictor's catalog,
+  even though `/predict` can still score it (falling back to subject/global
+  estimates) and `/history` has real data for it. See
+  `model_service.py::get_catalog`.
 - `POST /predict` - body: `{"courses": [{"subject": "CPSC", "course": "110", "session": "W"}, ...], "weights": {...}}`
   (1-5 courses, `session` optional, defaults to `"W"`; `weights` optional).
   Returns per-course difficulty plus a credit-weighted term-level score.

@@ -56,9 +56,13 @@ def health():
 
 @app.get("/courses", response_model=CourseCatalogResponse)
 def courses():
-    """Subjects and course numbers we have historical data for, for a
-    browse-by-subject UI. Not an authoritative course catalog - see
-    data/README.md for what this data source is and isn't."""
+    """Subjects and course numbers we have ANY historical data for - the
+    union of the predictor's PAIR-era (<=2016W) catalog and the history
+    browser's wider (1996-2025) catalog, so a course introduced after 2016
+    (e.g. CPSC 330) still shows up in search even though the predictor
+    falls back to subject/global estimates for it. Not an authoritative
+    course catalog - see data/README.md for what this data source is and
+    isn't."""
     return {"subjects": get_catalog()}
 
 
