@@ -55,6 +55,15 @@ export interface GradeBin {
   count: number;
 }
 
+export interface SectionStats {
+  section: string;
+  instructors: string[];
+  avg: number;
+  std_dev: number | null;
+  fail_rate: number;
+  enrolled: number;
+}
+
 export interface InstructorTermStats {
   instructor: string;
   sections: string[];
@@ -77,6 +86,7 @@ export interface CourseTermStats {
   fail_rate: number | null;
   instructors: string[];
   distribution: GradeBin[] | null;
+  sections: SectionStats[];
   instructor_stats: InstructorTermStats[];
   best_instructor: string | null;
   source: "pair" | "tableau_v1" | "tableau_v2";

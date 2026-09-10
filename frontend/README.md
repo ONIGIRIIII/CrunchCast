@@ -31,7 +31,7 @@ from `api/`).
 - `app/components/CourseHistoryPanel.tsx` - per-course "View by term"
   toggle: lazy-fetches `GET /courses/{subject}/{course}/history` and lets
   you pick a specific term (1996 through the latest available, currently
-  2025W), then a specific instructor within that term (or "Overall"). With
+  2025W), then a specific section within that term (or "Overall"). With
   "Overall" selected, shows that term's blended avg/std-dev/high/low/
   fail-rate/enrolled/distribution plus a comparison table of that term's
   actual instructors (each instructor's sections that term combined into
@@ -39,11 +39,12 @@ from `api/`).
   once, not twice) with a "Best pick this term" badge on the
   highest-average instructor (only shown when 2+ instructors taught that
   term) and a disclaimer that this is historical grade outcomes only, not a
-  teaching-quality rating. With a specific instructor selected, shows only
-  their own combined numbers and which sections they taught - no comparison
-  table, no badge. Instructors are scoped strictly to the selected term,
-  never an all-time list; a term→instructor reset on term change happens in
-  the `selectTerm()` handler rather than a `useEffect`, to avoid the
+  teaching-quality rating. With one specific section selected (e.g.
+  "Section 102"), shows only that section's own numbers (not combined with
+  any other section) and its instructor(s) - no comparison table, no badge.
+  Sections are scoped strictly to the selected term, never an all-time
+  list; a term→section reset on term change happens in the `selectTerm()`
+  handler rather than a `useEffect`, to avoid the
   `react-hooks/set-state-in-effect` lint rule.
 - `app/components/GradeDistributionChart.tsx` - the selected term's 11-bin
   grade distribution as a bar chart (single hue - a bar chart's height
@@ -52,9 +53,9 @@ from `api/`).
 - `app/components/DifficultyBadge.tsx` / `ConfidenceNote.tsx` - small
   presentational pieces; `lib/scoreColor.ts` is the shared 0-100 color scale.
 - `lib/api.ts` - typed fetch wrapper for `GET /courses`, `POST /predict`,
-  and `GET /courses/{subject}/{course}/history` (including its
-  per-term `instructor_stats`/`best_instructor` fields); the only file that
-  knows the API's shape.
+  and `GET /courses/{subject}/{course}/history` (including its per-term
+  `sections` and `instructor_stats`/`best_instructor` fields); the only
+  file that knows the API's shape.
 
 ## Notes
 
@@ -73,11 +74,13 @@ from `api/`).
   a 2016W term with one, against the raw API response), the grade
   distribution chart's hover tooltip, instructor names (including the
   singular/plural "Instructor(s)" label switching correctly), the
-  per-term instructor comparison table (confirmed CPSC 110 2016W's
+  per-term Overall instructor comparison table (confirmed CPSC 110 2016W's
   highest-average instructor, Kiczales at 82.5% combining sections 102 and
   BCS into one row, is the one marked "Best pick this term," and that
-  "CH"-coded challenge-for-credit sections never appear), a
-  specific-instructor selection showing only that instructor's own combined
-  stats with no comparison table or badge, and an unknown-course request
+  "CH"-coded challenge-for-credit sections never appear), and a
+  specific-section selection (e.g. "Section 102") showing only that
+  section's own 80.7% average and instructor with no comparison table or
+  badge - distinct from Overall's combined 82.5% for the same instructor -
+  and an unknown-course request
   (falls back to "very low confidence" with a low-confidence warning
   banner).

@@ -37,24 +37,28 @@ root). Docs at `http://127.0.0.1:8000/docs`.
   `schemas.py` for the full request/response shape.
 - `GET /courses/{subject}/{course}/history` - real per-term stats (avg,
   std dev, high, low, fail rate, enrolled, `instructors`, `distribution`,
-  `instructor_stats`, `best_instructor`), most recent term first, spanning
-  1996 through whatever's most recently available (currently 2025W). **Not
-  the same data window the predictor uses** - the model only ever
-  trains/predicts on PAIR Reports data through 2016W; this endpoint
-  additionally draws on two newer, non-corrupted sources
+  `sections`, `instructor_stats`, `best_instructor`), most recent term
+  first, spanning 1996 through whatever's most recently available
+  (currently 2025W). **Not the same data window the predictor uses** - the
+  model only ever trains/predicts on PAIR Reports data through 2016W; this
+  endpoint additionally draws on two newer, non-corrupted sources
   (`tableau-dashboard` for 2017-2021, `tableau-dashboard-v2` for 2022+)
   purely for display. `std_dev` is `null` for 2022+ terms since that source
   doesn't report it - never estimated. `instructors` is every distinct name
   reported across that term's sections (empty list if none). `distribution`
   is the 11-bin grade breakdown (`{bin, count}` pairs) for that term,
-  `null` when the term's stats are unavailable/suppressed. `instructor_stats`
-  is that term's actual instructors (`instructor`, `sections`, `avg`,
-  `std_dev`, `fail_rate`, `enrolled`), scoped strictly to that one term -
-  not an all-time list - with each instructor's own sections that term
-  combined (enrollment-weighted) into a single row, so a professor teaching
-  two sections shows up once, not twice. `best_instructor` is the
-  instructor with the highest combined average grade that term, or `null`
-  when fewer than 2 instructors taught that term; "challenge for credit"
+  `null` when the term's stats are unavailable/suppressed. `sections` is
+  that term's actual, individual sections (`section`, `instructors`, `avg`,
+  `std_dev`, `fail_rate`, `enrolled`), un-combined - for picking one
+  specific section and seeing just its own numbers and instructor(s).
+  `instructor_stats` is the same term's sections combined up to instructor
+  granularity (`instructor`, `sections`, `avg`, `std_dev`, `fail_rate`,
+  `enrolled`) - each instructor's own sections that term merged
+  (enrollment-weighted) into a single row, so a professor teaching two
+  sections shows up once, not twice - for the "Overall" comparison view.
+  `best_instructor` is the instructor with the highest combined average
+  grade that term, or `null` when fewer than 2 instructors taught that
+  term; "challenge for credit"
   exam-only sections are excluded entirely before any of this, never
   eligible to win. **Not a teaching-quality rating** - correlational grade
   history only, confounded by self-selection and exam difficulty; the

@@ -1,25 +1,30 @@
 """Raw per-term grade stats for a course, e.g. "CPSC 110 in 2015W: avg 73.25,
-std dev 17.12, high 100, low 9, fail rate 13.5%, enrolled 1405" - plus,
-for that same term, per-INSTRUCTOR stats combined across every section they
-taught that term (data/processed/course_section_stats.parquet, built by
-data/scripts/clean_section_stats.py, aggregated here from section- to
-instructor-granularity).
+std dev 17.12, high 100, low 9, fail rate 13.5%, enrolled 1405" - plus, for
+that same term, both the individual SECTIONS offered (with their own
+instructor(s)/stats, for picking one specific section) and per-INSTRUCTOR
+stats combined across every section they taught that term (for the
+"Overall" comparison) - both derived from
+data/processed/course_section_stats.parquet, built by
+data/scripts/clean_section_stats.py.
 
 Deliberately separate from predict.py: doesn't touch the model or the
 aggregated "current stats" lookup tables, just serves real historical
 numbers so a user can pick a specific term - and within it, a specific
-instructor, or "Overall" to compare that term's actual instructors against
-each other - the way ubcgrades.com does. Spans 1996 through whatever's most
-recently available (currently 2025W), even though the PREDICTOR itself
-only ever uses PAIR Reports data through 2016W. See data/README.md for why
-those two things are allowed to cover different windows.
+SECTION (own stats + instructor name(s), no combining), or "Overall" to
+compare that term's actual INSTRUCTORS against each other (each
+instructor's sections that term combined into one row) - the way
+ubcgrades.com does. Spans 1996 through whatever's most recently available
+(currently 2025W), even though the PREDICTOR itself only ever uses PAIR
+Reports data through 2016W. See data/README.md for why those two things
+are allowed to cover different windows.
 
-Combining across sections (rather than showing each section on its own
-row): a student cares about "how has this professor graded this term," not
-about how a course happens to be split into lecture/lab codes. Sections are
-enrollment-weighted-combined per instructor (std_dev only over sections
-that report one); a co-taught section's stats count fully toward each
-listed instructor, same documented simplification as before.
+Combining across sections for the Overall comparison (rather than showing
+each section on its own row): a student cares about "how has this
+professor graded this term," not about how a course happens to be split
+into lecture/lab codes. Sections are enrollment-weighted-combined per
+instructor (std_dev only over sections that report one); a co-taught
+section's stats count fully toward each listed instructor, same documented
+simplification used everywhere else in this project.
 
 "Best instructor" is deliberately simple (highest combined average grade
 that term, only computed when there are 2+ instructors to compare) and is
@@ -52,6 +57,26 @@ class CourseHistoryProvider:
         stats["session_label"] = stats["session"].map({"W": "Winter", "S": "Summer"})
         self._stats = stats.sort_values("session_order", ascending=False)
         self._sections = pd.read_parquet(course_section_stats_path)
+
+    def _sections_for_term(self, subject: str, course: str, year: int, session: str) -> list[dict]:
+        rows = self._sections[
+            (self._sections["subject"] == subject)
+            & (self._sections["course"] == course)
+            & (self._sections["year"] == year)
+            & (self._sections["session"] == session)
+        ].sort_values("avg", ascending=False)
+
+        return [
+            {
+                "section": row["section"],
+                "instructors": list(row["instructors"]) if row["instructors"] is not None and len(row["instructors"]) else [],
+                "avg": round(float(row["avg"]), 1),
+                "std_dev": round(float(row["std_dev"]), 1) if pd.notna(row["std_dev"]) else None,
+                "fail_rate": round(float(row["fail_rate"]) * 100, 1),
+                "enrolled": int(row["enrolled"]),
+            }
+            for _, row in rows.iterrows()
+        ]
 
     def _instructor_stats_for_term(self, subject: str, course: str, year: int, session: str) -> list[dict]:
         rows = self._sections[
@@ -120,6 +145,7 @@ class CourseHistoryProvider:
                     for col in BIN_COLS
                 ]
             instructors = row["instructors"]
+            sections = self._sections_for_term(subject, course, int(row["year"]), row["session"])
             instructor_stats = self._instructor_stats_for_term(subject, course, int(row["year"]), row["session"])
             best_instructor = instructor_stats[0]["instructor"] if len(instructor_stats) >= 2 else None
 
@@ -136,6 +162,7 @@ class CourseHistoryProvider:
                 "fail_rate": round(float(row["fail_rate"]) * 100, 1) if pd.notna(row["fail_rate"]) else None,
                 "instructors": list(instructors) if instructors is not None and len(instructors) else [],
                 "distribution": distribution,
+                "sections": sections,
                 "instructor_stats": instructor_stats,
                 "best_instructor": best_instructor,
                 "source": row["source"],

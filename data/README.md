@@ -201,16 +201,20 @@ leaking into what the model trains or predicts on.
 `data/processed/course_section_stats.parquet`, built by
 `data/scripts/clean_section_stats.py`, is the raw per-SECTION building
 block: one row per (subject, course, year, session, section) - instructor(s),
-avg, std dev, fail rate, enrolled. `model/history.py::_instructor_stats_for_term`
-then combines it up to instructor granularity at read time - every section
-a given instructor taught within a given term is merged into one
-enrollment-weighted row for that instructor - which is what actually powers
-the `instructor_stats`/`best_instructor` fields on
-`GET /courses/{subject}/{course}/history` and the frontend's per-term
-instructor comparison table. Scoped strictly to that one term, unlike the
-now-removed all-time instructor comparison this replaces (see below). Same
-three sources and same "never read by the model" separation as the
-term-stats table above.
+avg, std dev, fail rate, enrolled. `model/history.py` reads it two ways for
+each term:
+
+- **`sections`** - the raw rows as-is, one per real section, for picking a
+  specific section (e.g. "Section 102") and seeing exactly that section's
+  own numbers and its instructor(s) - no combining.
+- **`instructor_stats`/`best_instructor`** (`_instructor_stats_for_term`) -
+  the same rows combined up to instructor granularity: every section a
+  given instructor taught within that term is merged into one
+  enrollment-weighted row, for the "Overall" comparison view.
+
+Both are scoped strictly to that one term, unlike the now-removed all-time
+instructor comparison this replaces (see below). Same three sources and
+same "never read by the model" separation as the term-stats table above.
 
 This replaced an earlier all-time, cross-term "compare instructors" table
 (`instructor_course_stats.parquet`, `clean_instructor_stats.py`) built as
@@ -221,21 +225,29 @@ UBC RMP data exists. The all-time version was removed at the user's
 request in favor of this term-scoped view: a student picking a term wants
 to know who's teaching *that specific offering*, not a professor's career
 average, and the "best pick" framing only makes sense when it's actually
-comparing the real choices on offer that term. It was then further
-refined, again at the user's request, from a per-SECTION comparison (a
-professor teaching two sections would show up as two separate rows) to a
-per-INSTRUCTOR comparison - a student cares how a professor has graded
-that term, not which lecture/lab code they happened to be assigned.
+comparing the real choices on offer that term.
 
-**Combining across sections**: for each term, a section's stats are
-attributed in full to every instructor listed on it (";"-separated,
-co-taught sections attribute fully to each - documented simplification,
-the data doesn't say who taught which part), then grouped by instructor
-and enrollment-weighted together (`avg`, `fail_rate`; `std_dev` only over
-the sections that report one, `null` if none do). E.g. CPSC 110 2016W:
-Gregor Kiczales taught both section 102 and BCS that term - the API
-returns one row for him (`sections: ["102", "BCS"]`, enrollment-weighted
-`avg`), not two.
+The comparison view (Overall) was then further refined, again at the
+user's request, from a per-SECTION comparison (a professor teaching two
+sections would show up as two separate rows) to a per-INSTRUCTOR
+comparison - a student cares how a professor has graded that term overall,
+not which lecture/lab code they happened to be assigned. A follow-up
+request then asked for the section-level picker back alongside it: pick
+"Overall" to compare instructors (combined across their sections that
+term), or pick one specific section to see just that section's own
+numbers and instructor name(s) - not combined with anything else, since
+those numbers are "already displaying the stats from that section."
+
+**Combining across sections for the Overall comparison**: for each term, a
+section's stats are attributed in full to every instructor listed on it
+(";"-separated, co-taught sections attribute fully to each - documented
+simplification, the data doesn't say who taught which part), then grouped
+by instructor and enrollment-weighted together (`avg`, `fail_rate`;
+`std_dev` only over the sections that report one, `null` if none do). E.g.
+CPSC 110 2016W: Gregor Kiczales taught both section 102 and BCS that term
+- the Overall comparison shows one row for him (`sections: ["102", "BCS"]`,
+82.5% enrollment-weighted `avg`), not two - but selecting "Section 102"
+directly shows that section's own 80.7% average instead.
 
 **"Best pick this term"** is deliberately simple: the instructor with the
 highest combined average grade that term, computed only when 2+

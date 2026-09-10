@@ -87,6 +87,22 @@ class GradeBin(BaseModel):
     count: int = Field(..., description="Number of students who received a grade in this range")
 
 
+class SectionStats(BaseModel):
+    """Real stats for one individual section within a term (not combined
+    with the rest of that term's sections), e.g. CPSC 110 2016W section 102
+    taught by Gregor Kiczales. "Challenge for credit" exam-only sections
+    (coded e.g. "1CH") are excluded entirely - see
+    data/scripts/clean_section_stats.py - since they're not a real teaching
+    section a student would be choosing between."""
+
+    section: str = Field(..., description="Raw section code, e.g. '101', 'BCS', 'V01'")
+    instructors: list[str] = Field(..., description="Instructor(s) who taught this specific section")
+    avg: float
+    std_dev: float | None = Field(None, description="Not reported by the source for 2022+ terms - null, never estimated")
+    fail_rate: float = Field(..., description="0-100, percent of students who received a failing grade")
+    enrolled: int
+
+
 class InstructorTermStats(BaseModel):
     """Real stats for one instructor within a term, combined (enrollment-
     weighted) across every section they taught that term - e.g. CPSC 110
@@ -134,9 +150,12 @@ class CourseTermStats(BaseModel):
     distribution: list["GradeBin"] | None = Field(
         None, description="Grade-bin counts for this term, for a distribution chart; null when `available` is false"
     )
+    sections: list[SectionStats] = Field(
+        ..., description="Individual sections offered that term, for picking one specific section to see its own stats/instructor(s)"
+    )
     instructor_stats: list[InstructorTermStats] = Field(
         ...,
-        description="Per-instructor stats for that term, combined across each instructor's sections, for comparing against each other",
+        description="Per-instructor stats for that term, combined across each instructor's sections, for the 'Overall' comparison view",
     )
     best_instructor: str | None = Field(
         None,

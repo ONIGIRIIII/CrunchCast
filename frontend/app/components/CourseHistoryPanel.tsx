@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ApiError, getCourseHistory, type CourseTermStats, type InstructorTermStats } from "@/lib/api";
+import { ApiError, getCourseHistory, type CourseTermStats, type SectionStats } from "@/lib/api";
 import GradeDistributionChart from "./GradeDistributionChart";
 
 const OVERALL = "__overall__";
@@ -20,7 +20,7 @@ export default function CourseHistoryPanel({ subject, course }: { subject: strin
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTermKey, setSelectedTermKey] = useState<string | null>(null);
-  const [selectedInstructor, setSelectedInstructor] = useState<string>(OVERALL);
+  const [selectedSection, setSelectedSection] = useState<string>(OVERALL);
 
   function toggle() {
     const next = !open;
@@ -45,11 +45,11 @@ export default function CourseHistoryPanel({ subject, course }: { subject: strin
 
   function selectTerm(key: string) {
     setSelectedTermKey(key);
-    setSelectedInstructor(OVERALL); // switching terms resets the instructor picker back to "Overall"
+    setSelectedSection(OVERALL); // switching terms resets the section picker back to "Overall"
   }
 
-  const selectedInstructorStats: InstructorTermStats | null =
-    selectedTerm?.instructor_stats.find((s) => s.instructor === selectedInstructor) ?? null;
+  const selectedSectionStats: SectionStats | null =
+    selectedTerm?.sections.find((s) => s.section === selectedSection) ?? null;
 
   return (
     <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
@@ -80,16 +80,16 @@ export default function CourseHistoryPanel({ subject, course }: { subject: strin
                   ))}
                 </select>
 
-                {selectedTerm && selectedTerm.instructor_stats.length > 0 && (
+                {selectedTerm && selectedTerm.sections.length > 0 && (
                   <select
-                    value={selectedInstructor}
-                    onChange={(e) => setSelectedInstructor(e.target.value)}
+                    value={selectedSection}
+                    onChange={(e) => setSelectedSection(e.target.value)}
                     className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1 text-xs"
                   >
                     <option value={OVERALL}>Overall</option>
-                    {selectedTerm.instructor_stats.map((s) => (
-                      <option key={s.instructor} value={s.instructor}>
-                        {s.instructor}
+                    {selectedTerm.sections.map((s) => (
+                      <option key={s.section} value={s.section}>
+                        Section {s.section}
                       </option>
                     ))}
                   </select>
@@ -103,7 +103,7 @@ export default function CourseHistoryPanel({ subject, course }: { subject: strin
               )}
 
               {/* Overall: the term's blended stats + a comparison of that term's actual instructors */}
-              {selectedTerm && selectedTerm.available && selectedInstructor === OVERALL && (
+              {selectedTerm && selectedTerm.available && selectedSection === OVERALL && (
                 <>
                   <dl className="mt-2 grid grid-cols-3 gap-x-4 gap-y-2 text-xs sm:grid-cols-6">
                     <div>
@@ -184,32 +184,34 @@ export default function CourseHistoryPanel({ subject, course }: { subject: strin
                 </>
               )}
 
-              {/* A specific instructor: just their own combined numbers, no comparison/best-pick marking */}
-              {selectedInstructorStats && (
+              {/* A specific section: that section's own numbers, plus who taught it - no comparison/best-pick marking */}
+              {selectedSectionStats && (
                 <dl className="mt-2 grid grid-cols-3 gap-x-4 gap-y-2 text-xs sm:grid-cols-5">
                   <div>
                     <dt className="text-neutral-500">Average</dt>
-                    <dd className="font-medium">{selectedInstructorStats.avg}%</dd>
+                    <dd className="font-medium">{selectedSectionStats.avg}%</dd>
                   </div>
                   <div>
                     <dt className="text-neutral-500">Std dev</dt>
                     <dd className="font-medium">
-                      {selectedInstructorStats.std_dev != null ? selectedInstructorStats.std_dev : "not reported"}
+                      {selectedSectionStats.std_dev != null ? selectedSectionStats.std_dev : "not reported"}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-neutral-500">Fail rate</dt>
-                    <dd className="font-medium">{selectedInstructorStats.fail_rate}%</dd>
+                    <dd className="font-medium">{selectedSectionStats.fail_rate}%</dd>
                   </div>
                   <div>
                     <dt className="text-neutral-500">Enrolled</dt>
-                    <dd className="font-medium">{selectedInstructorStats.enrolled}</dd>
+                    <dd className="font-medium">{selectedSectionStats.enrolled}</dd>
                   </div>
                   <div className="col-span-3 sm:col-span-1">
                     <dt className="text-neutral-500">
-                      Section{selectedInstructorStats.sections.length !== 1 ? "s" : ""}
+                      Instructor{selectedSectionStats.instructors.length !== 1 ? "s" : ""}
                     </dt>
-                    <dd className="font-medium">{selectedInstructorStats.sections.join(", ")}</dd>
+                    <dd className="font-medium">
+                      {selectedSectionStats.instructors.length > 0 ? selectedSectionStats.instructors.join(", ") : "-"}
+                    </dd>
                   </div>
                 </dl>
               )}

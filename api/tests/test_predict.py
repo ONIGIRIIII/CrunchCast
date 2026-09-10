@@ -94,6 +94,27 @@ def test_course_history_unknown_course_returns_empty_list():
     assert response.json()["terms"] == []
 
 
+def test_course_history_includes_raw_sections_scoped_to_that_term():
+    """The `sections` list is the individual, un-combined sections offered
+    that term (for picking one specific section), separate from the
+    combined-by-instructor `instructor_stats` list (for "Overall")."""
+    response = client.get("/courses/CPSC/110/history")
+    terms = response.json()["terms"]
+    term_2016w = next(t for t in terms if t["year"] == 2016 and t["session"] == "W")
+    sections = term_2016w["sections"]
+    assert len(sections) > 1  # 2016W had multiple real sections
+    section_codes = {s["section"] for s in sections}
+    assert {"101", "102", "BCS"} <= section_codes
+    # "challenge for credit" exam-only sections must never appear as a real choice
+    assert not any("CH" in code.upper() for code in section_codes)
+    for s in sections:
+        assert isinstance(s["instructors"], list)
+        assert 0.0 <= s["avg"] <= 100.0
+
+    kiczales_bcs = next(s for s in sections if s["section"] == "BCS")
+    assert kiczales_bcs["instructors"] == ["Kiczales, Gregor"]
+
+
 def test_course_history_includes_instructor_stats_scoped_to_that_term():
     """Instructor stats should be scoped to the specific term, not an
     all-time list, and combined across each instructor's own sections that
