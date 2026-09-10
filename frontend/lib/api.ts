@@ -77,6 +77,23 @@ export interface CourseHistoryResponse {
   terms: CourseTermStats[];
 }
 
+export interface InstructorStats {
+  instructor: string;
+  avg: number;
+  std_dev: number | null;
+  fail_rate: number;
+  enrolled_total: number;
+  n_offerings: number;
+  first_year: number;
+  last_year: number;
+}
+
+export interface CourseInstructorsResponse {
+  subject: string;
+  course: string;
+  instructors: InstructorStats[];
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {}
@@ -96,6 +113,16 @@ export async function getCourseHistory(subject: string, course: string): Promise
   );
   if (!response.ok) {
     throw new ApiError(`Failed to load course history (${response.status})`);
+  }
+  return response.json();
+}
+
+export async function getCourseInstructors(subject: string, course: string): Promise<CourseInstructorsResponse> {
+  const response = await fetch(
+    `${API_URL}/courses/${encodeURIComponent(subject)}/${encodeURIComponent(course)}/instructors`
+  );
+  if (!response.ok) {
+    throw new ApiError(`Failed to load instructor stats (${response.status})`);
   }
   return response.json();
 }

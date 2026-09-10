@@ -123,6 +123,33 @@ class CourseHistoryResponse(BaseModel):
     terms: list[CourseTermStats] = Field(..., description="Most recent term first")
 
 
+class InstructorStats(BaseModel):
+    """Historical grade stats for one instructor's offerings of a course.
+
+    This is NOT a teaching-quality rating - it's correlational grade
+    history (self-selection, exam difficulty vs. teaching style, TA
+    effects, and course changes over time all confound it). We don't use
+    RateMyProfessors: its Terms of Use prohibit automated scraping, and no
+    legitimate pre-existing dataset was found - see data/README.md."""
+
+    instructor: str = Field(..., description="Most recently used name spelling/format for this instructor")
+    avg: float = Field(..., description="Enrollment-weighted average grade across their offerings of this course")
+    std_dev: float | None = Field(
+        None, description="Enrollment-weighted average grade spread; null if never reported for any of their offerings"
+    )
+    fail_rate: float = Field(..., description="0-100, enrollment-weighted percent of students who failed")
+    enrolled_total: int
+    n_offerings: int = Field(..., description="Number of course-sections taught (co-taught sections count for each instructor)")
+    first_year: int
+    last_year: int
+
+
+class CourseInstructorsResponse(BaseModel):
+    subject: str
+    course: str
+    instructors: list[InstructorStats] = Field(..., description="Sorted by average grade, highest first")
+
+
 class PredictResponse(BaseModel):
     term_difficulty_score: float = Field(..., description="Credit-weighted average across all requested courses")
     term_personalized_score: float | None = Field(

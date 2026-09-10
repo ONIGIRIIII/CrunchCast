@@ -38,10 +38,17 @@ from `api/`).
   grade distribution as a bar chart (single hue - a bar chart's height
   already encodes magnitude, so color doesn't need to do that job too),
   with a hover tooltip showing the exact count and percentage per bin.
+- `app/components/InstructorComparison.tsx` - per-course "Compare
+  instructors" toggle: lazy-fetches `GET /courses/{subject}/{course}/instructors`
+  and shows a table (avg, fail rate, std dev, offerings, years taught) sorted
+  by average grade, with a factual "Historically highest average" label on
+  the top row - deliberately not "best," and deliberately not RateMyProfessors
+  (see `data/README.md`'s "Per-instructor comparison" section for why).
 - `app/components/DifficultyBadge.tsx` / `ConfidenceNote.tsx` - small
   presentational pieces; `lib/scoreColor.ts` is the shared 0-100 color scale.
 - `lib/api.ts` - typed fetch wrapper for `GET /courses`, `POST /predict`,
-  and `GET /courses/{subject}/{course}/history`; the only file that knows
+  `GET /courses/{subject}/{course}/history`, and
+  `GET /courses/{subject}/{course}/instructors`; the only file that knows
   the API's shape.
 
 ## Notes
@@ -60,6 +67,9 @@ from `api/`).
   the term-picker (checked both a 2025W term with no reported std dev and
   a 2016W term with one, against the raw API response), the grade
   distribution chart's hover tooltip, instructor names (including the
-  singular/plural "Instructor(s)" label switching correctly), and an
-  unknown-course request (falls back to "very low confidence" with a
-  low-confidence warning banner).
+  singular/plural "Instructor(s)" label switching correctly), the
+  instructor comparison table (confirmed Gregor Kiczales' PAIR-era and
+  Tableau-era CPSC 110 sections correctly merge into one 2009-2024 row
+  instead of splitting by name format), and an unknown-course request
+  (falls back to "very low confidence" with a low-confidence warning
+  banner).

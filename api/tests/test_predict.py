@@ -94,6 +94,39 @@ def test_course_history_unknown_course_returns_empty_list():
     assert response.json()["terms"] == []
 
 
+def test_course_instructors_sorted_by_avg_descending():
+    response = client.get("/courses/CPSC/110/instructors")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["subject"] == "CPSC"
+    assert body["course"] == "110"
+    instructors = body["instructors"]
+    assert len(instructors) > 0
+    avgs = [i["avg"] for i in instructors]
+    assert avgs == sorted(avgs, reverse=True)
+    for i in instructors:
+        assert i["instructor"]
+        assert i["n_offerings"] >= 1
+        assert i["first_year"] <= i["last_year"]
+
+
+def test_course_instructors_merges_name_formats_across_eras():
+    """Confirms the PAIR ('Last, First') vs Tableau ('First Last') name
+    format wrinkle doesn't split the same person into two entries."""
+    response = client.get("/courses/CPSC/110/instructors")
+    instructors = response.json()["instructors"]
+    kiczales = [i for i in instructors if "Kiczales" in i["instructor"]]
+    assert len(kiczales) == 1
+    assert kiczales[0]["first_year"] < 2017 < kiczales[0]["last_year"]  # spans both eras
+    assert kiczales[0]["n_offerings"] > 10
+
+
+def test_course_instructors_unknown_course_returns_empty_list():
+    response = client.get("/courses/ZZZZ/999/instructors")
+    assert response.status_code == 200
+    assert response.json()["instructors"] == []
+
+
 def test_predict_rejects_more_than_five_courses():
     courses = [{"subject": "CPSC", "course": "110"}] * 6
     response = client.post("/predict", json={"courses": courses})

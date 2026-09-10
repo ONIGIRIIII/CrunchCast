@@ -195,6 +195,44 @@ columns underneath it, which would double-count. See `grade_bins.py`.
 zero risk of newer, differently-sourced, or unvetted-for-modeling data
 leaking into what the model trains or predicts on.
 
+## Per-instructor comparison (also separate from the model)
+
+`data/processed/instructor_course_stats.parquet` powers `GET
+/courses/{subject}/{course}/instructors` and the frontend's "Compare
+instructors" table - historical avg grade, fail rate, std dev, and
+offering count per instructor who has taught a course, built by
+`data/scripts/clean_instructor_stats.py`. Same three sources and same
+"never read by the model" separation as the term-history table above.
+
+This was the legitimate half of a request to integrate RateMyProfessors
+(RMP) ratings. **RMP was declined**: its Terms of Use explicitly prohibit
+automated scraping without prior permission, and no legitimate,
+pre-existing, safely-redistributable snapshot of UBC RMP data was found
+(unlike the PAIR/Tableau grade data, which is an openly-hosted GitHub
+archive of UBC's own public reports). What's here instead is real grade
+history only - **not a teaching-quality rating**. It says nothing about
+teaching style, fairness, or workload, and it's confounded by things like
+student self-selection into sections and exam difficulty; the API and UI
+copy both say this explicitly rather than imply "best."
+
+**Real wrinkle, confirmed against actual data**: professor name FORMAT
+differs by source - PAIR is "Last, First" (e.g. "Kiczales, Gregor"), both
+Tableau sources are "First Last" (e.g. "Gregor Kiczales"). Grouping by the
+raw string would split the same person into two "different" instructors
+depending on which era they taught in. Fixed by normalizing each name to a
+token-set matching key (lowercase, split on comma/space, sorted as a
+frozenset) for grouping only - "Kiczales, Gregor" and "Gregor Kiczales"
+both produce `{gregor, kiczales}` - while displaying the most-recently-seen
+raw name as the label. Verified end to end: Gregor Kiczales' CPSC 110
+sections from 2009 (PAIR era) through 2024 (Tableau era) correctly roll
+into one entry, not two. This won't catch middle names/initials or
+nicknames - a documented limitation, consistent with the professor-name
+inconsistency already noted above.
+
+Sections with multiple ";"-separated instructors (co-taught) attribute
+that section's full stats to EACH listed instructor - a documented
+simplification, not a bug: the data doesn't say who taught which part.
+
 ## Course metadata stub
 
 `data/external/course_metadata.csv` is a small, hand-curated stub of course

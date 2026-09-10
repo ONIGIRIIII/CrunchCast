@@ -48,6 +48,15 @@ root). Docs at `http://127.0.0.1:8000/docs`.
   `distribution` is the 11-bin grade breakdown (`{bin, count}` pairs) for
   that term, `null` when the term's stats are unavailable/suppressed. See
   `data/README.md`'s "Course-term history browser" section.
+- `GET /courses/{subject}/{course}/instructors` - per-instructor
+  historical grade stats (avg, fail rate, std dev, offering count, years
+  taught), sorted by average grade descending. **Not a teaching-quality
+  rating** - correlational grade history only; the response and UI copy
+  say this explicitly. Built from the same PAIR + Tableau sources as the
+  history endpoint above (same separation from the model), with instructor
+  names normalized across sources' different formats so the same person
+  isn't double-counted - see `data/README.md`'s "Per-instructor comparison"
+  section for why RateMyProfessors itself isn't used here.
 
 ## Config
 
