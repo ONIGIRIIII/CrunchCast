@@ -36,27 +36,31 @@ root). Docs at `http://127.0.0.1:8000/docs`.
   objective `difficulty_score` too, not just a personalized one. See
   `schemas.py` for the full request/response shape.
 - `GET /courses/{subject}/{course}/history` - real per-term stats (avg,
-  std dev, high, low, fail rate, enrolled, `instructors`, `distribution`),
-  most recent term first, spanning 1996 through whatever's most recently
-  available (currently 2025W). **Not the same data window the predictor
-  uses** - the model only ever trains/predicts on PAIR Reports data through
-  2016W; this endpoint additionally draws on two newer, non-corrupted
-  sources (`tableau-dashboard` for 2017-2021, `tableau-dashboard-v2` for
-  2022+) purely for display. `std_dev` is `null` for 2022+ terms since that
-  source doesn't report it - never estimated. `instructors` is every
-  distinct name reported across that term's sections (empty list if none).
-  `distribution` is the 11-bin grade breakdown (`{bin, count}` pairs) for
-  that term, `null` when the term's stats are unavailable/suppressed. See
-  `data/README.md`'s "Course-term history browser" section.
-- `GET /courses/{subject}/{course}/instructors` - per-instructor
-  historical grade stats (avg, fail rate, std dev, offering count, years
-  taught), sorted by average grade descending. **Not a teaching-quality
-  rating** - correlational grade history only; the response and UI copy
-  say this explicitly. Built from the same PAIR + Tableau sources as the
-  history endpoint above (same separation from the model), with instructor
-  names normalized across sources' different formats so the same person
-  isn't double-counted - see `data/README.md`'s "Per-instructor comparison"
-  section for why RateMyProfessors itself isn't used here.
+  std dev, high, low, fail rate, enrolled, `instructors`, `distribution`,
+  `instructor_stats`, `best_instructor`), most recent term first, spanning
+  1996 through whatever's most recently available (currently 2025W). **Not
+  the same data window the predictor uses** - the model only ever
+  trains/predicts on PAIR Reports data through 2016W; this endpoint
+  additionally draws on two newer, non-corrupted sources
+  (`tableau-dashboard` for 2017-2021, `tableau-dashboard-v2` for 2022+)
+  purely for display. `std_dev` is `null` for 2022+ terms since that source
+  doesn't report it - never estimated. `instructors` is every distinct name
+  reported across that term's sections (empty list if none). `distribution`
+  is the 11-bin grade breakdown (`{bin, count}` pairs) for that term,
+  `null` when the term's stats are unavailable/suppressed. `instructor_stats`
+  is that term's actual instructors (`instructor`, `sections`, `avg`,
+  `std_dev`, `fail_rate`, `enrolled`), scoped strictly to that one term -
+  not an all-time list - with each instructor's own sections that term
+  combined (enrollment-weighted) into a single row, so a professor teaching
+  two sections shows up once, not twice. `best_instructor` is the
+  instructor with the highest combined average grade that term, or `null`
+  when fewer than 2 instructors taught that term; "challenge for credit"
+  exam-only sections are excluded entirely before any of this, never
+  eligible to win. **Not a teaching-quality rating** - correlational grade
+  history only, confounded by self-selection and exam difficulty; the
+  schema docstring and UI copy say this explicitly. See `data/README.md`'s
+  "Course-term history browser" and "Per-term instructor stats and best
+  pick this term" sections.
 
 ## Config
 

@@ -45,6 +45,7 @@ python data/scripts/eda.py                  # -> data/eda/summary.md + plots
 # History browser only (does not affect the model at all):
 python data/scripts/download_tableau_data.py  # -> data/raw/tableau-dashboard{,-v2}/ (gitignored)
 python data/scripts/clean_tableau_data.py     # -> data/processed/course_term_stats.parquet
+python data/scripts/clean_section_stats.py    # -> data/processed/course_section_stats.parquet
 ```
 
 `data/processed/` and `data/eda/` are committed to the repo (they're small)
@@ -195,43 +196,69 @@ columns underneath it, which would double-count. See `grade_bins.py`.
 zero risk of newer, differently-sourced, or unvetted-for-modeling data
 leaking into what the model trains or predicts on.
 
-## Per-instructor comparison (also separate from the model)
+## Per-term instructor stats and "best pick this term" (also separate from the model)
 
-`data/processed/instructor_course_stats.parquet` powers `GET
-/courses/{subject}/{course}/instructors` and the frontend's "Compare
-instructors" table - historical avg grade, fail rate, std dev, and
-offering count per instructor who has taught a course, built by
-`data/scripts/clean_instructor_stats.py`. Same three sources and same
-"never read by the model" separation as the term-history table above.
+`data/processed/course_section_stats.parquet`, built by
+`data/scripts/clean_section_stats.py`, is the raw per-SECTION building
+block: one row per (subject, course, year, session, section) - instructor(s),
+avg, std dev, fail rate, enrolled. `model/history.py::_instructor_stats_for_term`
+then combines it up to instructor granularity at read time - every section
+a given instructor taught within a given term is merged into one
+enrollment-weighted row for that instructor - which is what actually powers
+the `instructor_stats`/`best_instructor` fields on
+`GET /courses/{subject}/{course}/history` and the frontend's per-term
+instructor comparison table. Scoped strictly to that one term, unlike the
+now-removed all-time instructor comparison this replaces (see below). Same
+three sources and same "never read by the model" separation as the
+term-stats table above.
 
-This was the legitimate half of a request to integrate RateMyProfessors
-(RMP) ratings. **RMP was declined**: its Terms of Use explicitly prohibit
-automated scraping without prior permission, and no legitimate,
-pre-existing, safely-redistributable snapshot of UBC RMP data was found
-(unlike the PAIR/Tableau grade data, which is an openly-hosted GitHub
-archive of UBC's own public reports). What's here instead is real grade
-history only - **not a teaching-quality rating**. It says nothing about
-teaching style, fairness, or workload, and it's confounded by things like
-student self-selection into sections and exam difficulty; the API and UI
-copy both say this explicitly rather than imply "best."
+This replaced an earlier all-time, cross-term "compare instructors" table
+(`instructor_course_stats.parquet`, `clean_instructor_stats.py`) built as
+the legitimate half of a request to integrate RateMyProfessors (RMP)
+ratings - RMP itself was declined since its Terms of Use explicitly
+prohibit automated scraping and no legitimate, redistributable snapshot of
+UBC RMP data exists. The all-time version was removed at the user's
+request in favor of this term-scoped view: a student picking a term wants
+to know who's teaching *that specific offering*, not a professor's career
+average, and the "best pick" framing only makes sense when it's actually
+comparing the real choices on offer that term. It was then further
+refined, again at the user's request, from a per-SECTION comparison (a
+professor teaching two sections would show up as two separate rows) to a
+per-INSTRUCTOR comparison - a student cares how a professor has graded
+that term, not which lecture/lab code they happened to be assigned.
 
-**Real wrinkle, confirmed against actual data**: professor name FORMAT
-differs by source - PAIR is "Last, First" (e.g. "Kiczales, Gregor"), both
-Tableau sources are "First Last" (e.g. "Gregor Kiczales"). Grouping by the
-raw string would split the same person into two "different" instructors
-depending on which era they taught in. Fixed by normalizing each name to a
-token-set matching key (lowercase, split on comma/space, sorted as a
-frozenset) for grouping only - "Kiczales, Gregor" and "Gregor Kiczales"
-both produce `{gregor, kiczales}` - while displaying the most-recently-seen
-raw name as the label. Verified end to end: Gregor Kiczales' CPSC 110
-sections from 2009 (PAIR era) through 2024 (Tableau era) correctly roll
-into one entry, not two. This won't catch middle names/initials or
-nicknames - a documented limitation, consistent with the professor-name
-inconsistency already noted above.
+**Combining across sections**: for each term, a section's stats are
+attributed in full to every instructor listed on it (";"-separated,
+co-taught sections attribute fully to each - documented simplification,
+the data doesn't say who taught which part), then grouped by instructor
+and enrollment-weighted together (`avg`, `fail_rate`; `std_dev` only over
+the sections that report one, `null` if none do). E.g. CPSC 110 2016W:
+Gregor Kiczales taught both section 102 and BCS that term - the API
+returns one row for him (`sections: ["102", "BCS"]`, enrollment-weighted
+`avg`), not two.
 
-Sections with multiple ";"-separated instructors (co-taught) attribute
-that section's full stats to EACH listed instructor - a documented
-simplification, not a bug: the data doesn't say who taught which part.
+**"Best pick this term"** is deliberately simple: the instructor with the
+highest combined average grade that term, computed only when 2+
+instructors taught that term (`None` otherwise - no badge on a
+single-instructor term). This is **not a teaching-quality rating** -
+self-selection into sections, exam difficulty, and TA support all confound
+a raw average - and both the API schema docstring and the frontend UI copy
+say so explicitly.
+
+**"Challenge for credit" sections are excluded** before any of the above.
+Section codes containing "CH" (e.g. `1CH`, `CH1`, `9CH`) are an exam-only
+credit mechanism for students who already know the material, not a real
+section a student chooses between - and their tiny, self-selected cohorts
+score artificially high (92-93% on fewer than 20 students), which was
+initially winning "best pick" for reasons that have nothing to do with a
+normal section's teaching. Filtered out by
+`clean_section_stats.py::_drop_challenge_sections` (20 rows filtered
+across the full dataset).
+
+Sections with no instructor listed at all can't be attributed to anyone
+and are dropped from this per-instructor comparison (they still count
+toward the term's own blended Overall stats, which come from
+`course_term_stats.parquet` and are unaffected).
 
 ## Course metadata stub
 

@@ -13,7 +13,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "model"))
 from aggregate import aggregate_term  # noqa: E402
 from history import CourseHistoryProvider  # noqa: E402
-from instructors import InstructorStatsProvider  # noqa: E402
 from predict import CourseDifficultyPredictor  # noqa: E402
 
 
@@ -37,17 +36,6 @@ def get_catalog() -> dict[str, list[str]]:
 
 def get_course_history(subject: str, course: str) -> list[dict]:
     return get_history_provider().get_history(subject, course)
-
-
-@lru_cache(maxsize=1)
-def get_instructor_stats_provider() -> InstructorStatsProvider:
-    """Loaded once per process; separate table again
-    (instructor_course_stats.parquet, display-only, not used for prediction)."""
-    return InstructorStatsProvider()
-
-
-def get_course_instructors(subject: str, course: str) -> list[dict]:
-    return get_instructor_stats_provider().get_instructors(subject, course)
 
 
 def predict_term(course_requests, weights=None) -> dict:

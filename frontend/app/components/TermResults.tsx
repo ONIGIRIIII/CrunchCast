@@ -3,7 +3,6 @@ import DifficultyBadge from "./DifficultyBadge";
 import ConfidenceNote from "./ConfidenceNote";
 import ExplanationChart from "./ExplanationChart";
 import CourseHistoryPanel from "./CourseHistoryPanel";
-import InstructorComparison from "./InstructorComparison";
 
 export default function TermResults({ result }: { result: PredictResponse }) {
   const personalized = result.term_personalized_score;
@@ -73,7 +72,6 @@ export default function TermResults({ result }: { result: PredictResponse }) {
             </div>
             <ExplanationChart explanation={c.explanation} />
             <CourseHistoryPanel subject={c.subject} course={c.course} />
-            <InstructorComparison subject={c.subject} course={c.course} />
           </div>
         ))}
       </div>

@@ -87,6 +87,28 @@ class GradeBin(BaseModel):
     count: int = Field(..., description="Number of students who received a grade in this range")
 
 
+class InstructorTermStats(BaseModel):
+    """Real stats for one instructor within a term, combined (enrollment-
+    weighted) across every section they taught that term - e.g. CPSC 110
+    2016W, Gregor Kiczales, combining sections 101 and BCS into one row.
+    "Challenge for credit" exam-only sections (coded e.g. "1CH") are
+    excluded entirely before this aggregation - see
+    data/scripts/clean_section_stats.py - since they're not a real teaching
+    section a student would be choosing between. A co-taught section's
+    stats count fully toward each listed instructor (documented
+    simplification: the data doesn't say who taught which part)."""
+
+    instructor: str = Field(..., description="Instructor name")
+    sections: list[str] = Field(..., description="Section codes taught by this instructor that term, combined into these stats")
+    avg: float = Field(..., description="Enrollment-weighted average across this instructor's sections that term")
+    std_dev: float | None = Field(
+        None,
+        description="Enrollment-weighted over sections that report one; null if none of this instructor's sections that term report it",
+    )
+    fail_rate: float = Field(..., description="0-100, enrollment-weighted percent of students who received a failing grade")
+    enrolled: int = Field(..., description="Total enrolled across this instructor's sections that term")
+
+
 class CourseTermStats(BaseModel):
     """Real stats for one specific term (year+session), not an average -
     from data/processed/course_term_stats.parquet, which spans 1996 through
@@ -112,6 +134,17 @@ class CourseTermStats(BaseModel):
     distribution: list["GradeBin"] | None = Field(
         None, description="Grade-bin counts for this term, for a distribution chart; null when `available` is false"
     )
+    instructor_stats: list[InstructorTermStats] = Field(
+        ...,
+        description="Per-instructor stats for that term, combined across each instructor's sections, for comparing against each other",
+    )
+    best_instructor: str | None = Field(
+        None,
+        description=(
+            "Instructor name with the highest combined average grade that term, only set when there are "
+            "2+ instructors to compare. NOT a teaching-quality judgment - see data/README.md."
+        ),
+    )
     source: Literal["pair", "tableau_v1", "tableau_v2"] = Field(
         ..., description="Which underlying data source this term's row came from"
     )
@@ -121,33 +154,6 @@ class CourseHistoryResponse(BaseModel):
     subject: str
     course: str
     terms: list[CourseTermStats] = Field(..., description="Most recent term first")
-
-
-class InstructorStats(BaseModel):
-    """Historical grade stats for one instructor's offerings of a course.
-
-    This is NOT a teaching-quality rating - it's correlational grade
-    history (self-selection, exam difficulty vs. teaching style, TA
-    effects, and course changes over time all confound it). We don't use
-    RateMyProfessors: its Terms of Use prohibit automated scraping, and no
-    legitimate pre-existing dataset was found - see data/README.md."""
-
-    instructor: str = Field(..., description="Most recently used name spelling/format for this instructor")
-    avg: float = Field(..., description="Enrollment-weighted average grade across their offerings of this course")
-    std_dev: float | None = Field(
-        None, description="Enrollment-weighted average grade spread; null if never reported for any of their offerings"
-    )
-    fail_rate: float = Field(..., description="0-100, enrollment-weighted percent of students who failed")
-    enrolled_total: int
-    n_offerings: int = Field(..., description="Number of course-sections taught (co-taught sections count for each instructor)")
-    first_year: int
-    last_year: int
-
-
-class CourseInstructorsResponse(BaseModel):
-    subject: str
-    course: str
-    instructors: list[InstructorStats] = Field(..., description="Sorted by average grade, highest first")
 
 
 class PredictResponse(BaseModel):

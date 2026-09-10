@@ -94,37 +94,42 @@ def test_course_history_unknown_course_returns_empty_list():
     assert response.json()["terms"] == []
 
 
-def test_course_instructors_sorted_by_avg_descending():
-    response = client.get("/courses/CPSC/110/instructors")
-    assert response.status_code == 200
-    body = response.json()
-    assert body["subject"] == "CPSC"
-    assert body["course"] == "110"
-    instructors = body["instructors"]
-    assert len(instructors) > 0
-    avgs = [i["avg"] for i in instructors]
-    assert avgs == sorted(avgs, reverse=True)
-    for i in instructors:
-        assert i["instructor"]
-        assert i["n_offerings"] >= 1
-        assert i["first_year"] <= i["last_year"]
+def test_course_history_includes_instructor_stats_scoped_to_that_term():
+    """Instructor stats should be scoped to the specific term, not an
+    all-time list, and combined across each instructor's own sections that
+    term (e.g. CPSC 110 2016W: Gregor Kiczales taught sections 102 and BCS,
+    both should be folded into one row for him, not shown separately)."""
+    response = client.get("/courses/CPSC/110/history")
+    terms = response.json()["terms"]
+    term_2016w = next(t for t in terms if t["year"] == 2016 and t["session"] == "W")
+    instructor_stats = term_2016w["instructor_stats"]
+    assert len(instructor_stats) > 1  # 2016W had multiple instructors
+    names = [s["instructor"] for s in instructor_stats]
+    assert len(names) == len(set(names))  # no instructor appears twice
+    for s in instructor_stats:
+        assert isinstance(s["sections"], list) and len(s["sections"]) > 0
+        # "challenge for credit" exam-only sections must never appear as a real choice
+        assert not any("CH" in code.upper() for code in s["sections"])
+        assert 0.0 <= s["avg"] <= 100.0
+
+    kiczales = next(s for s in instructor_stats if s["instructor"] == "Kiczales, Gregor")
+    assert set(kiczales["sections"]) == {"102", "BCS"}
 
 
-def test_course_instructors_merges_name_formats_across_eras():
-    """Confirms the PAIR ('Last, First') vs Tableau ('First Last') name
-    format wrinkle doesn't split the same person into two entries."""
-    response = client.get("/courses/CPSC/110/instructors")
-    instructors = response.json()["instructors"]
-    kiczales = [i for i in instructors if "Kiczales" in i["instructor"]]
-    assert len(kiczales) == 1
-    assert kiczales[0]["first_year"] < 2017 < kiczales[0]["last_year"]  # spans both eras
-    assert kiczales[0]["n_offerings"] > 10
+def test_course_history_best_instructor_is_the_highest_average():
+    response = client.get("/courses/CPSC/110/history")
+    terms = response.json()["terms"]
+    term_2016w = next(t for t in terms if t["year"] == 2016 and t["session"] == "W")
+    instructor_stats = term_2016w["instructor_stats"]
+    assert term_2016w["best_instructor"] == max(instructor_stats, key=lambda s: s["avg"])["instructor"]
 
 
-def test_course_instructors_unknown_course_returns_empty_list():
-    response = client.get("/courses/ZZZZ/999/instructors")
-    assert response.status_code == 200
-    assert response.json()["instructors"] == []
+def test_course_history_no_best_instructor_with_fewer_than_two_instructors():
+    response = client.get("/courses/CPSC/110/history")
+    terms = response.json()["terms"]
+    for t in terms:
+        if len(t["instructor_stats"]) < 2:
+            assert t["best_instructor"] is None
 
 
 def test_predict_rejects_more_than_five_courses():

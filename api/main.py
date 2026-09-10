@@ -13,29 +13,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from model_service import (
-    get_catalog,
-    get_course_history,
-    get_course_instructors,
-    get_history_provider,
-    get_instructor_stats_provider,
-    get_predictor,
-    predict_term,
-)
-from schemas import (
-    CourseCatalogResponse,
-    CourseHistoryResponse,
-    CourseInstructorsResponse,
-    PredictRequest,
-    PredictResponse,
-)
+from model_service import get_catalog, get_course_history, get_history_provider, get_predictor, predict_term
+from schemas import CourseCatalogResponse, CourseHistoryResponse, PredictRequest, PredictResponse
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    get_predictor()  # load the model + history/instructor tables at startup, not on the first request
+    get_predictor()  # load the model + history table at startup, not on the first request
     get_history_provider()
-    get_instructor_stats_provider()
     yield
 
 
@@ -87,20 +72,6 @@ def course_history(subject: str, course: str):
     """
     terms = get_course_history(subject, course)
     return {"subject": subject.strip().upper(), "course": course.strip().upper(), "terms": terms}
-
-
-@app.get("/courses/{subject}/{course}/instructors", response_model=CourseInstructorsResponse)
-def course_instructors(subject: str, course: str):
-    """Per-instructor historical grade stats for a course, sorted by
-    average grade descending. NOT a teaching-quality rating - correlational
-    grade history only (self-selection, exam difficulty vs. teaching
-    style, TA effects, and course changes over time all confound it). This
-    is deliberately NOT RateMyProfessors data: RMP's Terms of Use prohibit
-    automated scraping, and no legitimate pre-existing dataset was found -
-    see data/README.md.
-    """
-    instructors = get_course_instructors(subject, course)
-    return {"subject": subject.strip().upper(), "course": course.strip().upper(), "instructors": instructors}
 
 
 @app.post("/predict", response_model=PredictResponse)
