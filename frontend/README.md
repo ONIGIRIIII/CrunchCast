@@ -53,7 +53,9 @@ from `api/`).
   same numbers shown twice. Sections are scoped strictly to the selected
   term, never an all-time list; a term→section reset on term change happens
   in the `selectTerm()` handler rather than a `useEffect`, to avoid the
-  `react-hooks/set-state-in-effect` lint rule.
+  `react-hooks/set-state-in-effect` lint rule. Any field with no value
+  (std dev, instructor(s)) renders a bare `"-"` consistently, rather than
+  a mix of `"-"` and `"not reported"` across different fields.
 - `app/components/GradeDistributionChart.tsx` - a reusable 11-bin grade
   distribution bar chart (single hue - a bar chart's height already
   encodes magnitude, so color doesn't need to do that job too), with a
@@ -96,6 +98,10 @@ from `api/`).
   distribution, not the same chart repeated), search now correctly finding
   a course introduced after 2016W (CPSC 330, previously missing from the
   catalog entirely - predicted with an honest low-confidence banner, and
-  its full 2019W-2025W term history shown correctly), and an
-  unknown-course request (falls back to "very low confidence" with a
+  its full 2019W-2025W term history shown correctly), a section whose raw
+  "Professor" field was polluted with 50+ student/TA names (CPSC 110
+  2018W section 101 - confirmed it now shows "-" for instructor instead of
+  the wall of names, and that the Overall comparison table for that term
+  correctly shows only its 3 real instructors instead of 50+ bogus ones),
+  and an unknown-course request (falls back to "very low confidence" with a
   low-confidence warning banner).

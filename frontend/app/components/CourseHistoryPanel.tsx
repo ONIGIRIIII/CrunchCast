@@ -112,7 +112,7 @@ export default function CourseHistoryPanel({ subject, course }: { subject: strin
                     </div>
                     <div>
                       <dt className="text-neutral-500">Std dev</dt>
-                      <dd className="font-medium">{selectedTerm.std_dev != null ? selectedTerm.std_dev : "not reported"}</dd>
+                      <dd className="font-medium">{selectedTerm.std_dev != null ? selectedTerm.std_dev : "-"}</dd>
                     </div>
                     <div>
                       <dt className="text-neutral-500">High</dt>
@@ -194,7 +194,7 @@ export default function CourseHistoryPanel({ subject, course }: { subject: strin
                   <div>
                     <dt className="text-neutral-500">Std dev</dt>
                     <dd className="font-medium">
-                      {selectedSectionStats.std_dev != null ? selectedSectionStats.std_dev : "not reported"}
+                      {selectedSectionStats.std_dev != null ? selectedSectionStats.std_dev : "-"}
                     </dd>
                   </div>
                   <div>

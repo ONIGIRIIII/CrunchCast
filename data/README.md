@@ -288,6 +288,28 @@ and are dropped from this per-instructor comparison (they still count
 toward the term's own blended Overall stats, which come from
 `course_term_stats.parquet` and are unaffected).
 
+**Bug fixed: polluted "Professor" fields treated as unreliable, not
+displayed.** For a real, non-trivial share of rows (mostly
+`tableau-dashboard`, ~9.5% of its rows), the raw "Professor" field itself
+lists far more names than any real teaching team - verified against the
+raw source CSV: CPSC 110 2018W section 101's "Professor" field is a
+semicolon-separated list of 50+ names ("Amelia Milne;Bei Zhang;Brandon Jia
+Xin Tong;..."), clearly students or TAs rather than instructors, not a
+parsing bug on our side. Since legitimate large team-taught courses do
+exist in this data (PAIR-era APSC 100 sections list up to 9 real
+co-instructors; some medical/pharmacy courses list up to ~14),
+`clean_section_stats.py::_split_instructors` and
+`clean_tableau_data.py::_collect_instructors` both cap at
+`MAX_INSTRUCTORS_PER_SECTION = 15` - a section whose "Professor" field
+splits into more names than that is treated as unreliable and reports no
+instructor at all (shown as "-" in the UI), rather than displaying a wall
+of names. This also fixes the "Overall" per-term instructor comparison,
+which previously exploded one of these polluted rows into 50+ bogus
+"instructor" entries and could let one of them win "Best pick this term."
+This is a documented mitigation, not a perfect fix - a genuinely enormous
+teaching team beyond 15 would also be blanked, and a polluted row with
+exactly 15 or fewer bogus names would still slip through.
+
 ## Course metadata stub
 
 `data/external/course_metadata.csv` is a small, hand-curated stub of course

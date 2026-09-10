@@ -26,7 +26,12 @@ name (a term-level rollup can span several sections with different
 instructors), so it's collected separately from that term's individual
 section rows - every distinct, non-blank name (sections list multiple
 instructors separated by ";"), in the order first seen. Empty list if none
-were reported for that term.
+were reported for that term. A single section's own "Professor" field is
+skipped entirely (contributes no names) if it lists more than
+MAX_INSTRUCTORS_PER_SECTION - some rows (mostly in tableau-dashboard) have
+this field polluted with what looks like a student/TA roster rather than
+real instructors; see clean_section_stats.py's module docstring for the
+verified example and reasoning.
 """
 
 from pathlib import Path
@@ -48,6 +53,12 @@ def _numeric(df: pd.DataFrame, col: str) -> pd.Series:
     return pd.to_numeric(df[col], errors="coerce")
 
 
+# See clean_section_stats.py's MAX_INSTRUCTORS_PER_SECTION - same cap, same
+# reasoning, kept in sync here since this file parses the "Professor" field
+# independently.
+MAX_INSTRUCTORS_PER_SECTION = 15
+
+
 def _collect_instructors(section_rows: pd.DataFrame, professor_col: str = "professor") -> pd.DataFrame:
     """section_rows: one row per SECTION (not OVERALL), with TERM_KEY columns
     plus professor_col (possibly ";"-separated for multiple instructors).
@@ -55,9 +66,11 @@ def _collect_instructors(section_rows: pd.DataFrame, professor_col: str = "profe
     def names_for_group(names: pd.Series) -> list:
         seen = []
         for raw in names.dropna():
-            for name in str(raw).split(";"):
-                name = name.strip()
-                if name and name not in seen:
+            row_names = [n.strip() for n in str(raw).split(";") if n.strip()]
+            if len(row_names) > MAX_INSTRUCTORS_PER_SECTION:
+                continue  # unreliable - see MAX_INSTRUCTORS_PER_SECTION above
+            for name in row_names:
+                if name not in seen:
                     seen.append(name)
         return seen
 

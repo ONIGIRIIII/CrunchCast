@@ -129,6 +129,24 @@ def test_course_history_includes_raw_sections_scoped_to_that_term():
     assert kiczales_bcs["instructors"] == ["Kiczales, Gregor"]
 
 
+def test_course_history_section_with_polluted_professor_field_has_no_instructors():
+    """CPSC 110 2018W section 101's raw "Professor" field lists 50+ names
+    that are clearly students/TAs, not a real teaching team (verified
+    against the raw CSV) - an upstream data-quality issue. Rather than
+    display that wall of names, clean_section_stats.py treats any section
+    with more than MAX_INSTRUCTORS_PER_SECTION names as unreliable and
+    reports none, same as a genuinely unreported instructor."""
+    response = client.get("/courses/CPSC/110/history")
+    terms = response.json()["terms"]
+    term_2018w = next(t for t in terms if t["year"] == 2018 and t["session"] == "W")
+    section_101 = next(s for s in term_2018w["sections"] if s["section"] == "101")
+    assert section_101["instructors"] == []
+    # every section's instructor list should be a plausible teaching team size
+    for t in terms:
+        for s in t["sections"]:
+            assert len(s["instructors"]) <= 15
+
+
 def test_course_history_section_has_its_own_grade_distribution():
     """Each section carries its own 11-bin distribution, distinct from the
     term's blended one - so a specific section's chart isn't just the

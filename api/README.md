@@ -68,10 +68,13 @@ root). Docs at `http://127.0.0.1:8000/docs`.
   grade that term, or `null` when fewer than 2 instructors taught that
   term; "challenge for credit"
   exam-only sections are excluded entirely before any of this, never
-  eligible to win. **Not a teaching-quality rating** - correlational grade
-  history only, confounded by self-selection and exam difficulty; the
-  schema docstring and UI copy say this explicitly. See `data/README.md`'s
-  "Course-term history browser" and "Per-term instructor stats and best
+  eligible to win. A section's raw "Professor" field is also treated as
+  unreliable (reported as no instructor, not a wall of names) if it splits
+  into more than 15 names - a real upstream data-quality issue in a share
+  of rows, not a real teaching team. **Not a teaching-quality rating** -
+  correlational grade history only, confounded by self-selection and exam
+  difficulty; the schema docstring and UI copy say this explicitly. See
+  `data/README.md`'s "Course-term history browser" and "Per-term instructor stats and best
   pick this term" sections.
 
 ## Config

@@ -22,6 +22,17 @@ just that term's).
 
 DISPLAY-ONLY, like the other course_term_stats-adjacent tables: never read
 by build_features.py, train.py, or predict.py.
+
+**Known data-quality issue, fixed here**: for a small but real share of
+rows (mostly `tableau-dashboard`, ~9.5% of its rows), the raw "Professor"
+field itself contains far more than a real teaching team - e.g. CPSC 110
+2018W section 101's raw field lists 50+ full names that are clearly
+students or TAs, not instructors (verified against the raw CSV; this is
+an upstream data quality issue, not a bug in how we parse it). Legitimate
+large team-taught courses do exist in this data (e.g. APSC 100's PAIR-era
+sections list up to 9 real co-instructors, and some PAIR medical/pharmacy
+courses list up to ~14), so a low cap would wrongly blank those out. See
+MAX_INSTRUCTORS_PER_SECTION below.
 """
 
 from pathlib import Path
@@ -38,6 +49,12 @@ OUT_PATH = REPO_ROOT / "data" / "processed" / "course_section_stats.parquet"
 OUTPUT_COLS = ["year", "session", "subject", "course", "section", "instructors", "avg", "std_dev", "fail_rate", "enrolled", "source"] + BIN_COLS
 RAW_BIN_COLS = ["<50", "50-54", "55-59", "60-63", "64-67", "68-71", "72-75", "76-79", "80-84", "85-89", "90-100"]
 
+# Real teaching teams observed in the cleanest source (PAIR) top out around
+# 14 (some medical/pharmacy courses). Anything above this is treated as
+# unreliable ("Professor" field polluted with student/TA names or similar)
+# rather than displayed - see the module docstring.
+MAX_INSTRUCTORS_PER_SECTION = 15
+
 
 def _numeric(df: pd.DataFrame, col: str) -> pd.Series:
     return pd.to_numeric(df[col], errors="coerce")
@@ -46,7 +63,10 @@ def _numeric(df: pd.DataFrame, col: str) -> pd.Series:
 def _split_instructors(raw) -> list:
     if pd.isna(raw):
         return []
-    return [n.strip() for n in str(raw).split(";") if n.strip()]
+    names = [n.strip() for n in str(raw).split(";") if n.strip()]
+    if len(names) > MAX_INSTRUCTORS_PER_SECTION:
+        return []  # unreliable - see MAX_INSTRUCTORS_PER_SECTION above
+    return names
 
 
 def _drop_challenge_sections(df: pd.DataFrame) -> pd.DataFrame:
