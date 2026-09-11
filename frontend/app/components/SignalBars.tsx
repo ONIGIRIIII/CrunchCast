@@ -24,11 +24,16 @@ export default function SignalBars({ signals }: { signals: SignalValue[] }) {
         return (
           <div key={s.key}>
             <div className="flex items-baseline justify-between text-xs mb-1.5">
-              <span className="font-medium text-[var(--color-foreground)]">{s.label}</span>
+              <span className="font-bold text-[var(--color-foreground)]">{s.label}</span>
               <span className="text-[var(--color-text-subtle)]">{s.value.toFixed(0)}</span>
             </div>
-            <div className="relative w-full h-3 rounded-full hatch-texture bg-[var(--color-border)]/50 overflow-hidden">
+            <div className="relative w-full h-3 rounded-full hatch-texture bg-[var(--color-border)]/50">
               <div className={`h-full rounded-full ${barClass}`} style={{ width: `${widthPct}%` }} />
+              {/* Knob at the fill's end, matching the gauges' end-of-arc dot */}
+              <div
+                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white border border-black/10"
+                style={{ left: `${widthPct}%` }}
+              />
             </div>
           </div>
         );

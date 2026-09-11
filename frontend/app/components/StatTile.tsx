@@ -18,7 +18,7 @@ export default function StatTile({
         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />
         {label}
       </div>
-      <p className="font-semibold text-sm">{value}</p>
+      <p className="font-bold text-sm">{value}</p>
     </div>
   );
 }

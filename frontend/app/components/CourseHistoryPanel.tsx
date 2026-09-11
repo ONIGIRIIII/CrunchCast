@@ -161,7 +161,7 @@ export default function CourseHistoryPanel({
                                 className="border-t border-[var(--color-border)] hover:bg-[var(--color-hover-surface)]/60 transition-colors"
                               >
                                 <td className="pl-3 pr-3 py-2">
-                                  <span className="font-medium">{s.instructor}</span>
+                                  <span className="font-bold">{s.instructor}</span>
                                   {selectedTerm.best_instructor === s.instructor && (
                                     <span className="ml-1.5 inline-block rounded-full bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 text-[10px]">
                                       Best pick this term

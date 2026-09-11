@@ -53,7 +53,7 @@ export default function PersonalizationQuiz({ open, onClose, onComplete }: Props
       <div className="absolute inset-0 bg-black/40" onClick={close} />
       <div className="relative w-full max-w-xl rounded-2xl bg-[var(--color-surface-raised)] border border-[var(--color-border)] p-7 sm:p-8 shadow-lg">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-semibold">What does &quot;crunch&quot; mean to you?</h2>
+          <h2 className="text-lg font-bold">What does &quot;crunch&quot; mean to you?</h2>
           <button
             onClick={close}
             aria-label="Close quiz"
@@ -91,7 +91,7 @@ export default function PersonalizationQuiz({ open, onClose, onComplete }: Props
                   key={value}
                   title={label}
                   onClick={() => setAnswers((prev) => ({ ...prev, [question.id]: value }))}
-                  className={`flex-1 rounded-md border py-2.5 text-xs transition-colors ${
+                  className={`flex-1 rounded-md border py-2.5 text-xs font-bold transition-colors ${
                     selected
                       ? "bg-blue-600 border-blue-600 text-white"
                       : "border-[var(--color-border-strong)] hover:bg-[var(--color-hover-surface)]"
@@ -124,7 +124,7 @@ export default function PersonalizationQuiz({ open, onClose, onComplete }: Props
           <button
             onClick={next}
             disabled={!answered}
-            className="rounded-md bg-blue-600 text-white px-5 py-2.5 text-sm font-medium disabled:opacity-40 hover:bg-blue-700 transition-colors"
+            className="rounded-md bg-blue-600 text-white px-5 py-2.5 text-sm font-bold disabled:opacity-40 hover:bg-blue-700 transition-colors"
           >
             {isLast ? "See my crunch weights" : "Next"}
           </button>

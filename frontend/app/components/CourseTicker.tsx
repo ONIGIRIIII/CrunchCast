@@ -15,11 +15,11 @@ export default function CourseTicker({ courses }: { courses: CoursePrediction[] 
           const { dotClass, label } = bandFor(score);
           return (
             <div key={`${c.subject}-${c.course}`} className="flex items-center gap-3 px-5 py-4 shrink-0">
-              <div className="w-9 h-9 rounded-full bg-[var(--color-hover-surface)] flex items-center justify-center text-[11px] font-semibold text-[var(--color-foreground)] shrink-0">
+              <div className="w-9 h-9 rounded-full bg-[var(--color-hover-surface)] flex items-center justify-center text-[11px] font-bold text-[var(--color-foreground)] shrink-0">
                 {c.subject.slice(0, 2)}
               </div>
               <div>
-                <p className="text-sm font-medium leading-tight">
+                <p className="text-sm font-bold leading-tight">
                   {c.subject} {c.course}
                 </p>
                 <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-subtle)] mt-0.5">

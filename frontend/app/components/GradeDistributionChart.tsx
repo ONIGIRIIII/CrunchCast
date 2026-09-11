@@ -36,7 +36,7 @@ export default function GradeDistributionChart({
   return (
     <div className="mt-4">
       <p className="text-xs text-[var(--color-text-subtle)] mb-2">Grade distribution</p>
-      <div className="relative">
+      <div className="relative" style={{ height: HEIGHT }}>
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           className="w-full"
@@ -53,19 +53,25 @@ export default function GradeDistributionChart({
           </defs>
           <path d={areaPath} fill={`url(#${gradientId})`} />
           <path d={linePath} fill="none" stroke={accentHex} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
-          {distribution.map((b, i) => (
-            <circle
-              key={b.bin}
-              cx={xFor(i)}
-              cy={yFor(b.count)}
-              r={hovered === i ? 5 : 3}
-              fill={accentHex}
-              className="cursor-pointer transition-[r]"
-              onMouseEnter={() => setHovered(i)}
-              onMouseLeave={() => setHovered((h) => (h === i ? null : h))}
-            />
-          ))}
         </svg>
+        {/* Dots are plain HTML circles positioned by percentage, not SVG
+            <circle> elements - the chart's viewBox is stretched non-uniformly
+            (preserveAspectRatio="none") to fill the responsive width, which
+            would otherwise squash every <circle> into an ellipse. */}
+        {distribution.map((b, i) => (
+          <div
+            key={b.bin}
+            className="absolute -translate-x-1/2 -translate-y-1/2 p-1.5 cursor-pointer"
+            style={{ left: `${(xFor(i) / WIDTH) * 100}%`, top: `${(yFor(b.count) / HEIGHT) * 100}%` }}
+            onMouseEnter={() => setHovered(i)}
+            onMouseLeave={() => setHovered((h) => (h === i ? null : h))}
+          >
+            <span
+              className="block rounded-full transition-transform"
+              style={{ backgroundColor: accentHex, width: hovered === i ? 10 : 6, height: hovered === i ? 10 : 6 }}
+            />
+          </div>
+        ))}
         {hovered != null && (
           <div
             className="absolute -translate-x-1/2 -translate-y-[calc(100%+8px)] rounded-lg bg-neutral-950 border border-neutral-800 text-white text-[11px] px-2.5 py-1.5 whitespace-nowrap pointer-events-none shadow-lg z-10"
@@ -74,7 +80,7 @@ export default function GradeDistributionChart({
               top: `${(yFor(distribution[hovered].count) / HEIGHT) * 100}%`,
             }}
           >
-            <p className="font-semibold">{distribution[hovered].bin}</p>
+            <p className="font-bold">{distribution[hovered].bin}</p>
             <p className="text-neutral-400">
               {distribution[hovered].count} students (
               {total > 0 ? ((distribution[hovered].count / total) * 100).toFixed(0) : 0}%)

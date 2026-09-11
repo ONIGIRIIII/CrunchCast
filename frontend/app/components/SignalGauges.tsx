@@ -12,7 +12,7 @@ export default function SignalGauges({ signals }: { signals: SignalValue[] }) {
       {signals.map((s) => (
         <div key={s.key} className="flex flex-col items-center text-center gap-1">
           <RiskGauge score={s.value} size={130} showValue />
-          <p className="text-xs font-medium text-[var(--color-foreground)]">{s.label}</p>
+          <p className="text-xs font-bold text-[var(--color-foreground)]">{s.label}</p>
           {s.detail && <p className="text-[10px] text-[var(--color-text-subtle)] leading-tight">{s.detail}</p>}
         </div>
       ))}

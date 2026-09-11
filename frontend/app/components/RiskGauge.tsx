@@ -62,7 +62,7 @@ export default function RiskGauge({
           y={CY - 12}
           textAnchor="middle"
           fontSize={30}
-          className="fill-[var(--color-foreground)] font-bold"
+          className="fill-[var(--color-foreground)] font-black"
         >
           {score.toFixed(0)}
         </text>

@@ -36,12 +36,12 @@ export default function TermResults({ result }: { result: PredictResponse }) {
       {/* Full-width course ticker, so every course shows without needing to scroll it */}
       <CourseTicker courses={result.courses} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[440px_1fr] gap-6 items-start">
         {/* Left: term-level stats sidebar, sticky while scrolling the course list below */}
         <div className="flex flex-col gap-5 lg:sticky lg:top-6">
           <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
             <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
-              <h2 className="text-base font-semibold">Term risk performance</h2>
+              <h2 className="text-base font-bold">Term risk performance</h2>
               <span className="text-xs text-[var(--color-text-subtle)]">
                 {highConfidenceCount}/{result.n_courses} high-confidence
               </span>
@@ -53,8 +53,8 @@ export default function TermResults({ result }: { result: PredictResponse }) {
                   {personalized != null ? "Your crunch score" : "Term risk readout"}
                 </p>
                 <div className="flex items-center gap-3">
-                  <p className="text-4xl font-bold tracking-tight">{mainScore.toFixed(0)}</p>
-                  <DifficultyBadge score={mainScore} />
+                  <p className="text-4xl font-black tracking-tight">{mainScore.toFixed(0)}</p>
+                  <DifficultyBadge score={mainScore} showScore={false} />
                 </div>
                 {personalized != null && (
                   <p className="text-xs text-[var(--color-text-subtle)] mt-1.5">
@@ -77,7 +77,7 @@ export default function TermResults({ result }: { result: PredictResponse }) {
                 <p className={`text-xs font-medium ${band.heroMutedClass}`}>
                   {personalized != null ? "Your crunch score" : "Term difficulty"}
                 </p>
-                <p className="text-3xl font-bold text-white mt-1">{mainScore.toFixed(0)} / 100</p>
+                <p className="text-3xl font-black text-white mt-1">{mainScore.toFixed(0)} / 100</p>
                 <div className="mt-3">
                   <TermScoreChart points={scorePoints} />
                 </div>
@@ -93,7 +93,7 @@ export default function TermResults({ result }: { result: PredictResponse }) {
           </div>
 
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 sm:p-6">
-            <p className="text-sm font-semibold">Signal breakdown</p>
+            <p className="text-sm font-bold">Signal breakdown</p>
             <p className="text-xs text-[var(--color-text-subtle)] mb-4">
               Averaged across your {result.n_courses} course{result.n_courses !== 1 && "s"}
             </p>
@@ -101,7 +101,7 @@ export default function TermResults({ result }: { result: PredictResponse }) {
           </div>
 
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 sm:p-6">
-            <p className="text-sm font-semibold mb-3">About this score</p>
+            <p className="text-sm font-bold mb-3">About this score</p>
             <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
               {personalized != null
                 ? "Your crunch score is a weighted combination of four real historical signals (grade impact, fail risk, grading unpredictability, class size), weighted by your quiz answers. "
@@ -128,14 +128,13 @@ export default function TermResults({ result }: { result: PredictResponse }) {
             return (
               <div
                 key={`${c.subject}-${c.course}`}
-                className="rounded-2xl border border-[var(--color-border)] border-t-2 bg-[var(--color-surface)] p-5 sm:p-6"
-                style={{ borderTopColor: accent.hex }}
+                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 sm:p-6"
               >
                 <div className="flex items-center justify-between gap-4 mb-6">
                   <div className="flex items-center gap-2.5">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: accent.hex }} />
                     <div>
-                      <p className="font-semibold text-lg">
+                      <p className="font-bold text-lg">
                         {c.subject} {c.course}
                       </p>
                       <ConfidenceNote confidence={c.confidence} />

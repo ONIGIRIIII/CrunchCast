@@ -28,9 +28,16 @@ def aggregate_term(course_predictions: list[dict]) -> dict:
             course_predictions
         )
 
-    hardest_course = max(course_predictions, key=lambda c: c["difficulty_score"])
+    # Rank and threshold by personalized_score when the caller took the quiz -
+    # otherwise "hardest course" and "hard courses" would silently stay tied
+    # to the objective score even while the headline term score above has
+    # already switched to the personalized one.
+    def effective_score(c: dict) -> float:
+        return c.get("personalized_score", c["difficulty_score"])
+
+    hardest_course = max(course_predictions, key=effective_score)
     n_high_difficulty = sum(
-        1 for c in course_predictions if c["difficulty_score"] >= HIGH_DIFFICULTY_THRESHOLD
+        1 for c in course_predictions if effective_score(c) >= HIGH_DIFFICULTY_THRESHOLD
     )
     low_confidence_courses = [
         f"{c['subject']} {c['course']}"

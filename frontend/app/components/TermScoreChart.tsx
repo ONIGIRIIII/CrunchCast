@@ -35,7 +35,11 @@ export default function TermScoreChart({ points }: { points: ScorePoint[] }) {
   const areaPath = `${linePath} L ${xFor(n - 1)} ${HEIGHT} L ${xFor(0)} ${HEIGHT} Z`;
 
   return (
-    <div className="relative">
+    <div>
+      {/* This wrapper's height must be exactly the SVG's rendered height -
+          nothing else can live inside it - since the dots/tooltip below are
+          positioned by percentage against it. */}
+      <div className="relative" style={{ height: HEIGHT }}>
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full" style={{ height: HEIGHT }} preserveAspectRatio="none">
         <defs>
           <linearGradient id="term-score-fill" x1="0" y1="0" x2="0" y2="1">
@@ -45,18 +49,24 @@ export default function TermScoreChart({ points }: { points: ScorePoint[] }) {
         </defs>
         <path d={areaPath} fill="url(#term-score-fill)" />
         <path d={linePath} fill="none" stroke="white" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
-        {points.map((p, i) => (
-          <circle
-            key={`${p.subject}-${p.course}`}
-            cx={xFor(i)}
-            cy={yFor(p.score)}
-            r={hovered === i ? 6 : 4}
-            className="fill-white cursor-pointer transition-[r]"
-            onMouseEnter={() => setHovered(i)}
-            onMouseLeave={() => setHovered((h) => (h === i ? null : h))}
-          />
-        ))}
       </svg>
+      {/* Dots are plain HTML circles positioned by percentage, not SVG
+          <circle> elements - the chart's viewBox is stretched non-uniformly
+          (preserveAspectRatio="none") to fill the responsive width, which
+          would otherwise squash every <circle> into an ellipse. */}
+      {points.map((p, i) => (
+        <div
+          key={`${p.subject}-${p.course}`}
+          className="absolute -translate-x-1/2 -translate-y-1/2 p-2 cursor-pointer"
+          style={{ left: `${(xFor(i) / WIDTH) * 100}%`, top: `${(yFor(p.score) / HEIGHT) * 100}%` }}
+          onMouseEnter={() => setHovered(i)}
+          onMouseLeave={() => setHovered((h) => (h === i ? null : h))}
+        >
+          <span
+            className={`block rounded-full bg-white transition-transform ${hovered === i ? "w-3 h-3" : "w-2 h-2"}`}
+          />
+        </div>
+      ))}
       {hovered != null && (
         <div
           className="absolute -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-lg bg-black/85 text-white text-xs px-3 py-2 whitespace-nowrap pointer-events-none shadow-lg"
@@ -65,12 +75,13 @@ export default function TermScoreChart({ points }: { points: ScorePoint[] }) {
             top: `${(yFor(points[hovered].score) / HEIGHT) * 100}%`,
           }}
         >
-          <p className="font-semibold">
+          <p className="font-bold">
             {points[hovered].subject} {points[hovered].course}
           </p>
           <p className="text-white/70">{points[hovered].score.toFixed(0)} / 100</p>
         </div>
       )}
+      </div>
       <div className="flex justify-between mt-2 px-1">
         {points.map((p) => (
           <span key={`${p.subject}-${p.course}-label`} className="text-[10px] text-white/60">

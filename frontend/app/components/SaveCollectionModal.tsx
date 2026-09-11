@@ -31,7 +31,7 @@ export default function SaveCollectionModal({ open, courseCount, onClose, onSave
       <div className="absolute inset-0 bg-black/40" onClick={close} />
       <div className="relative w-full max-w-sm rounded-2xl bg-[var(--color-surface-raised)] border border-[var(--color-border)] p-6 shadow-lg">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-base font-semibold">Save this term</h2>
+          <h2 className="text-base font-bold">Save this term</h2>
           <button
             onClick={close}
             aria-label="Close"
@@ -66,7 +66,7 @@ export default function SaveCollectionModal({ open, courseCount, onClose, onSave
           <button
             onClick={save}
             disabled={!name.trim()}
-            className="rounded-md bg-blue-600 text-white px-4 py-2 text-sm font-medium disabled:opacity-40 hover:bg-blue-700 transition-colors"
+            className="rounded-md bg-blue-600 text-white px-4 py-2 text-sm font-bold disabled:opacity-40 hover:bg-blue-700 transition-colors"
           >
             Save
           </button>
