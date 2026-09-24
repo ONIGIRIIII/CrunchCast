@@ -123,13 +123,6 @@ body {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-/* Small-monitor page scale (75% below a big-monitor width) lives in
-   LandingPage.tsx now, as a JS-driven `transform: scale` with measured
-   height compensation - not here. It used CSS `zoom` at first, which
-   behaved inconsistently on macOS (Safari and Arc both showed a section's
-   background visibly detaching from its content); see the comment above
-   `pageScale` in LandingPage.tsx for the full explanation. */
-
 /* Kept as an explicit marker on numbers/labels/code even though it's
    currently the same face as .landing itself - these are the spots that
    were deliberately monospace, distinct from ordinary copy, before this

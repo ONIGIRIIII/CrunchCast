@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ApiError, predictTerm, type CourseInput, type Weights } from "@/lib/api";
@@ -178,44 +178,6 @@ export default function LandingPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Small-monitor scale: the page was laid out/spaced for a big monitor,
-  // so below a big-monitor width it renders `pageScale`d down instead of
-  // just "smaller" (see the `scaleContentRef` div below). This used CSS
-  // `zoom` at first, which is non-standard and turned out to behave
-  // inconsistently on macOS (both Safari and Arc) - a section's own
-  // background would visibly detach from its content, exposing the
-  // sitewide ambient background underneath through the gap. `transform:
-  // scale` is fully standard/consistent everywhere, at the cost of needing
-  // to do the height bookkeeping ourselves below, since transform (unlike
-  // zoom) doesn't shrink the element's contribution to document height.
-  const [pageScale, setPageScale] = useState(1);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 1536px)");
-    const update = () => setPageScale(mq.matches ? 0.75 : 1);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-
-  // Natural (unscaled) height of the scaled content, read via
-  // ResizeObserver - `offsetHeight`/`contentRect` reflect layout size,
-  // which `transform` never changes, so this stays accurate regardless of
-  // `pageScale`. Used to give the clipping wrapper below an explicit
-  // `height: naturalHeight * pageScale`, so the page's actual scrollable
-  // height matches what's visually rendered instead of leaving dead space
-  // below the shrunk content.
-  const scaleContentRef = useRef<HTMLDivElement>(null);
-  const [naturalHeight, setNaturalHeight] = useState<number | null>(null);
-  useEffect(() => {
-    const el = scaleContentRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      setNaturalHeight(entries[0].contentRect.height);
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
   const addedKeys = useMemo(() => new Set(courses.map((c) => `${c.subject}-${c.course}`)), [courses]);
 
   function addCourseIfNew(subject: string, course: string) {
@@ -247,7 +209,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="landing min-h-screen">
+    <div className="landing min-h-screen flex flex-col">
       {/* ---- Sitewide ambient background ---------------------------------
           The dot-network + accent glow that used to live only behind the
           hero now sits fixed behind the entire page (nav through footer),
@@ -255,13 +217,7 @@ export default function LandingPage() {
           hero section below draws its own solid background on top of it
           (it gets the 3D course graph instead), and every section after
           the hero uses a translucent background so this shows through the
-          gaps between cards.
-
-          Deliberately a sibling of `.landing-scale` below, not a child of
-          it - it needs to stay pinned at true viewport size/position (a
-          full-bleed backdrop) regardless of the small-monitor 75% scale
-          applied to the actual content, otherwise it'd shrink into a
-          smaller box and leave bare edges instead of covering the page. */}
+          gaps between cards. */}
       <div className="fixed inset-0 -z-20 overflow-hidden bg-[var(--color-background)]">
         <MeshBackground className="absolute inset-0" />
         <div
@@ -282,14 +238,7 @@ export default function LandingPage() {
           the row itself grows a "liquid glass" pill (blur + translucency +
           rim light) driven by `navScrolled`, both so the links stay
           legible over whatever section is scrolling underneath and so
-          scrolling reads as picking the nav up off the page.
-
-          Also deliberately a sibling of the scaled content, same reasoning
-          as the background above: `position: fixed` tracks the nearest
-          transformed ancestor instead of the real viewport, so nesting it
-          inside the `transform: scale` wrapper below would make it scroll
-          away with the page instead of staying pinned. Left unscaled - it's
-          a small floating pill, not part of what read as cramped. */}
+          scrolling reads as picking the nav up off the page. */}
       <header className="fixed top-0 inset-x-0 z-40">
         <div className="max-w-6xl mx-auto flex items-center justify-center px-4 sm:px-6 lg:px-10 py-6">
           <nav
@@ -344,21 +293,6 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* ---- Scaled content ------------------------------------------------
-          Clips to `naturalHeight * pageScale` (see the effect above) so the
-          page's actual scrollable height matches what's visually rendered -
-          `transform` doesn't shrink `scaleContentRef`'s contribution to
-          layout height the way `zoom` did, so without this the page would
-          scroll well past the visible (shrunk) content into blank space. */}
-      <div
-        className="overflow-hidden"
-        style={pageScale !== 1 && naturalHeight != null ? { height: naturalHeight * pageScale } : undefined}
-      >
-        <div
-          ref={scaleContentRef}
-          className="flex flex-col"
-          style={pageScale !== 1 ? { transform: `scale(${pageScale})`, transformOrigin: "top center" } : undefined}
-        >
       <main className="flex-1 flex flex-col">
         {/* ---- Hero ------------------------------------------------------
             Full viewport height/width again (100svh, not 100vh - avoids the
@@ -831,8 +765,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-        </div>
-      </div>
     </div>
   );
 }
