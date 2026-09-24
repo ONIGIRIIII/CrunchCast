@@ -123,6 +123,20 @@ body {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
 }
 
+/* The whole page was laid out/spaced for a big monitor, so it reads as
+   cramped (everything crowded near the top) on a smaller one instead of
+   just "smaller" - scaling the page itself down to 75% on screens below a
+   big-monitor width fixes that by shrinking the whole layout (not just
+   text), the same way browser zoom would. `zoom` (not `transform: scale`)
+   on purpose: transform creates a new containing block, which would break
+   this page's `fixed` nav/background (they'd stop tracking the viewport
+   and scroll away with the content instead). */
+@media (max-width: 1536px) {
+  .landing {
+    zoom: 0.75;
+  }
+}
+
 /* Kept as an explicit marker on numbers/labels/code even though it's
    currently the same face as .landing itself - these are the spots that
    were deliberately monospace, distinct from ordinary copy, before this
