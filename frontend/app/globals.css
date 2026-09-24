@@ -125,14 +125,19 @@ body {
 
 /* The whole page was laid out/spaced for a big monitor, so it reads as
    cramped (everything crowded near the top) on a smaller one instead of
-   just "smaller" - scaling the page itself down to 75% on screens below a
+   just "smaller" - scaling the content down to 75% on screens below a
    big-monitor width fixes that by shrinking the whole layout (not just
    text), the same way browser zoom would. `zoom` (not `transform: scale`)
    on purpose: transform creates a new containing block, which would break
-   this page's `fixed` nav/background (they'd stop tracking the viewport
-   and scroll away with the content instead). */
+   this page's `fixed` nav (it'd stop tracking the viewport and scroll away
+   with the content instead).
+
+   Scoped to `.landing-scale` (the content wrapper), not `.landing` (the
+   page root) - the root also wraps the fixed ambient background, which
+   must stay at true viewport size regardless of this scale, or it'd
+   shrink into a smaller box and leave bare unpainted edges around it. */
 @media (max-width: 1536px) {
-  .landing {
+  .landing-scale {
     zoom: 0.75;
   }
 }

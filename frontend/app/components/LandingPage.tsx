@@ -209,7 +209,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="landing min-h-screen flex flex-col">
+    <div className="landing min-h-screen">
       {/* ---- Sitewide ambient background ---------------------------------
           The dot-network + accent glow that used to live only behind the
           hero now sits fixed behind the entire page (nav through footer),
@@ -217,7 +217,13 @@ export default function LandingPage() {
           hero section below draws its own solid background on top of it
           (it gets the 3D course graph instead), and every section after
           the hero uses a translucent background so this shows through the
-          gaps between cards. */}
+          gaps between cards.
+
+          Deliberately a sibling of `.landing-scale` below, not a child of
+          it - it needs to stay pinned at true viewport size/position (a
+          full-bleed backdrop) regardless of the small-monitor 75% scale
+          applied to the actual content, otherwise it'd shrink into a
+          smaller box and leave bare edges instead of covering the page. */}
       <div className="fixed inset-0 -z-20 overflow-hidden bg-[var(--color-background)]">
         <MeshBackground className="absolute inset-0" />
         <div
@@ -229,6 +235,12 @@ export default function LandingPage() {
         />
       </div>
 
+      {/* ---- Scaled content ------------------------------------------------
+          Everything visible/interactive (nav through footer) lives in here
+          so the small-monitor 75% scale (see `.landing-scale` in
+          globals.css) applies to all of it together, while the fixed
+          background above stays untouched. */}
+      <div className="landing-scale min-h-screen flex flex-col">
       {/* ---- Nav --------------------------------------------------------
           No logo, no button, no bar over the hero - just the three link
           names floating over the page. Fixed (not sticky-in-flow) so it
@@ -765,6 +777,7 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
