@@ -123,24 +123,12 @@ body {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-/* The whole page was laid out/spaced for a big monitor, so it reads as
-   cramped (everything crowded near the top) on a smaller one instead of
-   just "smaller" - scaling the content down to 75% on screens below a
-   big-monitor width fixes that by shrinking the whole layout (not just
-   text), the same way browser zoom would. `zoom` (not `transform: scale`)
-   on purpose: transform creates a new containing block, which would break
-   this page's `fixed` nav (it'd stop tracking the viewport and scroll away
-   with the content instead).
-
-   Scoped to `.landing-scale` (the content wrapper), not `.landing` (the
-   page root) - the root also wraps the fixed ambient background, which
-   must stay at true viewport size regardless of this scale, or it'd
-   shrink into a smaller box and leave bare unpainted edges around it. */
-@media (max-width: 1536px) {
-  .landing-scale {
-    zoom: 0.75;
-  }
-}
+/* Small-monitor page scale (75% below a big-monitor width) lives in
+   LandingPage.tsx now, as a JS-driven `transform: scale` with measured
+   height compensation - not here. It used CSS `zoom` at first, which
+   behaved inconsistently on macOS (Safari and Arc both showed a section's
+   background visibly detaching from its content); see the comment above
+   `pageScale` in LandingPage.tsx for the full explanation. */
 
 /* Kept as an explicit marker on numbers/labels/code even though it's
    currently the same face as .landing itself - these are the spots that
