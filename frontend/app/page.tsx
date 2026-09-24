@@ -1,5 +1,5 @@
-import CourseBuilder from "./components/CourseBuilder";
+import LandingPage from "./components/LandingPage";
 
 export default function Home() {
-  return <CourseBuilder />;
+  return <LandingPage />;
 }

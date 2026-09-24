@@ -107,14 +107,17 @@ and each one's own grade distribution). Full request/response shapes in
 
 ### Frontend
 
-Next.js + Tailwind. Search-as-you-type course picker (max 5 courses/term),
-optional personalization quiz, per-course explanation bar charts, and a
-"View by term" panel per course: pick any term back to 1996, then either
-"Overall" (that term's blended stats, grade distribution, and a comparison of
-that term's actual instructors with a "Best pick this term" badge - explicitly
+Next.js + Tailwind, styled as a dark, blocky, monospace "terminal" UI (no
+rounded corners, no drop shadows - sections are divided by shared grid lines
+instead of nested card boxes). Search-as-you-type course picker (no cap on
+courses/term), optional personalization quiz, per-course explanation bar
+charts, and a "View by term" panel per course: pick any term back to 1996,
+then either "Overall" (that term's blended stats, grade distribution, and a
+comparison of that term's actual instructors with a "[BEST]" tag - explicitly
 labeled as historical grade outcomes, not a teaching-quality rating) or one
 specific section (its own un-combined stats, instructor, and grade
-distribution). Full component breakdown in `frontend/README.md`.
+distribution). Full component breakdown and design-system notes in
+`frontend/README.md`.
 
 ## Setup
 

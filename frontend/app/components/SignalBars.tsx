@@ -10,30 +10,31 @@ export interface SignalValue {
   detail?: string;
 }
 
-/** Horizontal bar chart of the four real signals, averaged across the
- * term - each row is a label above a full-width, hatch-textured track
- * with a colored fill (left to right) sized and colored by that signal's
- * own 0-100 severity. All bars share the same left edge, so - unlike a
- * column chart - there's no risk of rows misaligning from wrapped labels. */
+/** Horizontal bar chart of the four real signals, averaged across the term -
+ * each signal's label + value sits above its own full-width, hatch-textured
+ * track that fills left-to-right, colored by that signal's own 0-100
+ * severity. Stacked with generous gaps so four short rows still use up the
+ * full height of whatever column they share with taller sibling panels. */
 export default function SignalBars({ signals }: { signals: SignalValue[] }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5 flex-1 justify-center min-h-[70px]">
       {signals.map((s) => {
-        const { barClass } = bandFor(s.value);
+        const { barClass, textClass } = bandFor(s.value);
         const widthPct = Math.max(4, Math.min(100, s.value));
         return (
-          <div key={s.key}>
-            <div className="flex items-baseline justify-between text-xs mb-1.5">
-              <span className="font-bold text-[var(--color-foreground)]">{s.label}</span>
-              <span className="text-[var(--color-text-subtle)]">{s.value.toFixed(0)}</span>
+          <div key={s.key} className="flex flex-col gap-1.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-xs font-bold text-[var(--color-foreground)]">{s.label}</span>
+              <span className={`text-sm font-bold ${textClass}`}>{s.value.toFixed(0)}</span>
             </div>
-            <div className="relative w-full h-3 rounded-full hatch-texture bg-[var(--color-border)]/50">
-              <div className={`h-full rounded-full ${barClass}`} style={{ width: `${widthPct}%` }} />
-              {/* Knob at the fill's end, matching the gauges' end-of-arc dot */}
+            <div className="relative mt-3">
               <div
-                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white border border-black/10"
+                className={`absolute -top-3 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-current ${textClass}`}
                 style={{ left: `${widthPct}%` }}
               />
+              <div className="h-3 hatch-texture bg-[var(--color-border)]/50 overflow-hidden">
+                <div className={`h-full ${barClass}`} style={{ width: `${widthPct}%` }} />
+              </div>
             </div>
           </div>
         );

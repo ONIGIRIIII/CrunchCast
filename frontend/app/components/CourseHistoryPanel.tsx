@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ApiError, getCourseHistory, type CourseTermStats, type SectionStats } from "@/lib/api";
 import GradeDistributionChart from "./GradeDistributionChart";
 import StatTile from "./StatTile";
@@ -18,34 +18,33 @@ function termLabel(t: CourseTermStats) {
 export default function CourseHistoryPanel({
   subject,
   course,
-  accentHex,
 }: {
   subject: string;
   course: string;
-  accentHex: string;
 }) {
-  const [open, setOpen] = useState(false);
   const [terms, setTerms] = useState<CourseTermStats[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTermKey, setSelectedTermKey] = useState<string | null>(null);
   const [selectedSection, setSelectedSection] = useState<string>(OVERALL);
 
-  function toggle() {
-    const next = !open;
-    setOpen(next);
-    if (next && terms === null && !loading) {
-      setLoading(true);
-      setError(null);
-      getCourseHistory(subject, course)
-        .then((res) => {
-          setTerms(res.terms);
-          if (res.terms.length > 0) setSelectedTermKey(termKey(res.terms[0]));
-        })
-        .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load history."))
-        .finally(() => setLoading(false));
-    }
-  }
+  // Loads automatically (panel shows by default) and reloads whenever the
+  // selected course changes, since the detail panel reuses one instance
+  // across course switches instead of remounting per course.
+  useEffect(() => {
+    setTerms(null);
+    setSelectedTermKey(null);
+    setSelectedSection(OVERALL);
+    setError(null);
+    setLoading(true);
+    getCourseHistory(subject, course)
+      .then((res) => {
+        setTerms(res.terms);
+        if (res.terms.length > 0) setSelectedTermKey(termKey(res.terms[0]));
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load history."))
+      .finally(() => setLoading(false));
+  }, [subject, course]);
 
   const selectedTerm = useMemo(
     () => terms?.find((t) => termKey(t) === selectedTermKey) ?? null,
@@ -61,18 +60,9 @@ export default function CourseHistoryPanel({
     selectedTerm?.sections.find((s) => s.section === selectedSection) ?? null;
 
   return (
-    <div className="mt-5 pt-5 border-t border-[var(--color-border)]">
-      <button
-        onClick={toggle}
-        className="text-sm font-medium text-blue-400 hover:text-blue-300"
-      >
-        {open ? "Hide" : "View"} by term {open ? "▴" : "▾"}
-      </button>
-
-      {open && (
-        <div className="mt-4 rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-hover-surface)]/40 p-4">
+    <div>
           {loading && <p className="text-sm text-[var(--color-text-subtle)]">Loading...</p>}
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-severity-hard">{error}</p>}
           {terms && terms.length === 0 && (
             <p className="text-sm text-[var(--color-text-subtle)]">No term-by-term data for this course.</p>
           )}
@@ -85,10 +75,14 @@ export default function CourseHistoryPanel({
                   <select
                     value={selectedTermKey ?? ""}
                     onChange={(e) => selectTerm(e.target.value)}
-                    className="rounded-md border border-[var(--color-border-strong)] bg-transparent px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+                    className="border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-[var(--color-foreground)] px-2.5 py-1.5 text-xs focus:outline focus:outline-2 focus:outline-accent focus:-outline-offset-1"
                   >
                     {terms.map((t) => (
-                      <option key={termKey(t)} value={termKey(t)}>
+                      <option
+                        key={termKey(t)}
+                        value={termKey(t)}
+                        className="bg-[var(--color-surface-raised)] text-[var(--color-foreground)]"
+                      >
                         {termLabel(t)}
                       </option>
                     ))}
@@ -101,11 +95,17 @@ export default function CourseHistoryPanel({
                     <select
                       value={selectedSection}
                       onChange={(e) => setSelectedSection(e.target.value)}
-                      className="rounded-md border border-[var(--color-border-strong)] bg-transparent px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+                      className="border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-[var(--color-foreground)] px-2.5 py-1.5 text-xs focus:outline focus:outline-2 focus:outline-accent focus:-outline-offset-1"
                     >
-                      <option value={OVERALL}>Overall</option>
+                      <option value={OVERALL} className="bg-[var(--color-surface-raised)] text-[var(--color-foreground)]">
+                        Overall
+                      </option>
                       {selectedTerm.sections.map((s) => (
-                        <option key={s.section} value={s.section}>
+                        <option
+                          key={s.section}
+                          value={s.section}
+                          className="bg-[var(--color-surface-raised)] text-[var(--color-foreground)]"
+                        >
                           Section {s.section}
                         </option>
                       ))}
@@ -123,17 +123,25 @@ export default function CourseHistoryPanel({
               {/* Overall: the term's blended stats + a comparison of that term's actual instructors */}
               {selectedTerm && selectedTerm.available && selectedSection === OVERALL && (
                 <>
-                  <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
-                    <StatTile label="Average" value={`${selectedTerm.avg}%`} dotColor={accentHex} />
-                    <StatTile label="Std dev" value={selectedTerm.std_dev ?? "-"} dotColor={accentHex} />
-                    <StatTile label="High" value={selectedTerm.high ?? "-"} dotColor={accentHex} />
-                    <StatTile label="Low" value={selectedTerm.low ?? "-"} dotColor={accentHex} />
-                    <StatTile label="Fail rate" value={`${selectedTerm.fail_rate}%`} dotColor={accentHex} />
-                    <StatTile label="Enrolled" value={selectedTerm.enrolled ?? "-"} dotColor={accentHex} />
+                  <div className="mt-4 grid grid-cols-3 sm:grid-cols-6 divide-x divide-y divide-[var(--color-border)]">
+                    <StatTile label="Average" value={`${selectedTerm.avg}%`} />
+                    <StatTile label="Std dev" value={selectedTerm.std_dev ?? "-"} />
+                    <StatTile label="High" value={selectedTerm.high ?? "-"} />
+                    <StatTile label="Low" value={selectedTerm.low ?? "-"} />
+                    <StatTile label="Fail rate" value={`${selectedTerm.fail_rate}%`} />
+                    {/* divide-y only borders cells before the last one (see
+                        the identical wrapper below) - this wrapper closes
+                        that gap for the actual last cell instead of putting
+                        border-b on the grid itself, which would double up
+                        with the divide-y border already under every other
+                        cell. */}
+                    <div className="border-b border-[var(--color-border)]">
+                      <StatTile label="Enrolled" value={selectedTerm.enrolled ?? "-"} />
+                    </div>
                   </div>
 
                   {selectedTerm.distribution && (
-                    <GradeDistributionChart distribution={selectedTerm.distribution} accentHex={accentHex} />
+                    <GradeDistributionChart distribution={selectedTerm.distribution} />
                   )}
 
                   {selectedTerm.instructor_stats.length > 0 && (
@@ -142,7 +150,7 @@ export default function CourseHistoryPanel({
                         Instructors this term
                         {selectedTerm.best_instructor && " - compared against each other below"}
                       </p>
-                      <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
+                      <div className="overflow-x-auto border border-[var(--color-border)]">
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="text-left text-[var(--color-text-subtle)] bg-[var(--color-hover-surface)]/60">
@@ -163,8 +171,8 @@ export default function CourseHistoryPanel({
                                 <td className="pl-3 pr-3 py-2">
                                   <span className="font-bold">{s.instructor}</span>
                                   {selectedTerm.best_instructor === s.instructor && (
-                                    <span className="ml-1.5 inline-block rounded-full bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 text-[10px]">
-                                      Best pick this term
+                                    <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-severity-easy">
+                                      [BEST]
                                     </span>
                                   )}
                                 </td>
@@ -191,16 +199,18 @@ export default function CourseHistoryPanel({
 
               {/* A specific section: that section's own numbers, plus who taught it - no comparison/best-pick marking */}
               {selectedSectionStats && (
-                <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
-                  <StatTile label="Average" value={`${selectedSectionStats.avg}%`} dotColor={accentHex} />
-                  <StatTile
-                    label="Std dev"
-                    value={selectedSectionStats.std_dev ?? "-"}
-                    dotColor={accentHex}
-                  />
-                  <StatTile label="Fail rate" value={`${selectedSectionStats.fail_rate}%`} dotColor={accentHex} />
-                  <StatTile label="Enrolled" value={selectedSectionStats.enrolled} dotColor={accentHex} />
-                  <div className="col-span-3 sm:col-span-1">
+                <div className="mt-4 grid grid-cols-3 sm:grid-cols-5 divide-x divide-y divide-[var(--color-border)]">
+                  <StatTile label="Average" value={`${selectedSectionStats.avg}%`} />
+                  <StatTile label="Std dev" value={selectedSectionStats.std_dev ?? "-"} />
+                  <StatTile label="Fail rate" value={`${selectedSectionStats.fail_rate}%`} />
+                  <StatTile label="Enrolled" value={selectedSectionStats.enrolled} />
+                  {/* divide-y only borders cells before the last one - this
+                      wrapper (already needed for the col-span) closes that
+                      gap for the actual last cell instead of putting
+                      border-b on the grid itself, which would double up
+                      with the divide-y border already under every other
+                      cell. */}
+                  <div className="col-span-3 sm:col-span-1 border-b border-[var(--color-border)]">
                     <StatTile
                       label={`Instructor${selectedSectionStats.instructors.length !== 1 ? "s" : ""}`}
                       value={
@@ -208,19 +218,16 @@ export default function CourseHistoryPanel({
                           ? selectedSectionStats.instructors.join(", ")
                           : "-"
                       }
-                      dotColor={accentHex}
                     />
                   </div>
                 </div>
               )}
 
               {selectedSectionStats?.distribution && (
-                <GradeDistributionChart distribution={selectedSectionStats.distribution} accentHex={accentHex} />
+                <GradeDistributionChart distribution={selectedSectionStats.distribution} />
               )}
             </>
           )}
-        </div>
-      )}
     </div>
   );
 }

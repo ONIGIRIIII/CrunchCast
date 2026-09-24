@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
-import "@fontsource-variable/mona-sans";
 import "./globals.css";
+import ThemeInit from "./components/ThemeInit";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -15,11 +15,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={`${geistMono.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <ThemeInit />
+      </body>
     </html>
   );
 }

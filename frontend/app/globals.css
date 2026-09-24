@@ -3,7 +3,6 @@
 /* Dark is the default (no data-theme attribute set); light is an explicit
    opt-in via [data-theme="light"] on <html> (see lib/theme.ts). */
 :root {
-  --font-geist-sans: "Mona Sans Variable", ui-sans-serif, system-ui, sans-serif;
   --background: #0a0a0b;
   --surface: #161617;
   --surface-raised: #1c1c1e;
@@ -14,20 +13,38 @@
   --text-subtle: #737373;
   --hover-surface: #212124;
   --hatch-rgb: 255 255 255;
+  --severity-hard: #ef4444;
+  --severity-moderate: #f59e0b;
+  --severity-easy: #22c55e;
+  --chart-accent: #ed462d;
+  --accent: var(--foreground);
+  --on-accent: var(--background);
+  --glass-tint: rgba(0, 0, 0, 0.22);
+  --glass-highlight: rgba(255, 255, 255, 0.08);
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
-  --background: #ffffff;
-  --surface: #f6f6f7;
-  --surface-raised: #ffffff;
-  --foreground: #18181b;
-  --border: #e4e4e7;
-  --border-strong: #d4d4d8;
-  --text-muted: #52525b;
-  --text-subtle: #71717a;
-  --hover-surface: #ececee;
+  /* Softened off-white rather than pure #fff - a full-bleed white page next
+     to this much dark text/chrome read as glaring, so the page background
+     sits a step below white and cards (surface-raised) stay near-white to
+     keep their own contrast against it. */
+  --background: #f2f1ee;
+  --surface: #ebeae6;
+  --surface-raised: #fbfaf8;
+  --foreground: #26252a;
+  --border: #ddd9d2;
+  --border-strong: #c7c2b8;
+  --text-muted: #57545c;
+  --text-subtle: #75726f;
+  --hover-surface: #e3e1db;
   --hatch-rgb: 0 0 0;
+  --severity-hard: #dc2626;
+  --severity-moderate: #d97706;
+  --severity-easy: #16a34a;
+  --chart-accent: #c8391f;
+  --glass-tint: rgba(20, 18, 14, 0.06);
+  --glass-highlight: rgba(255, 255, 255, 0.7);
   color-scheme: light;
 }
 
@@ -41,14 +58,20 @@
   --color-text-muted: var(--text-muted);
   --color-text-subtle: var(--text-subtle);
   --color-hover-surface: var(--hover-surface);
-  --font-sans: var(--font-geist-sans);
+  --color-severity-hard: var(--severity-hard);
+  --color-severity-moderate: var(--severity-moderate);
+  --color-severity-easy: var(--severity-easy);
+  --color-chart-accent: var(--chart-accent);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --font-sans: var(--font-geist-mono);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
   line-height: 1.5;
 }
 
@@ -63,4 +86,124 @@ body {
     transparent 1px,
     transparent 6px
   );
+}
+
+/* Landing page course chips "materializing" out of the mesh burst behind
+   them - see MeshBackground.tsx's burst() and LandingPage.tsx's
+   addCourseIfNew, which fire together so the two effects read as one. */
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.chip-enter {
+  animation: chip-in 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chip-enter {
+    animation: none;
+  }
+}
+
+/* ---- Landing page only (app/components/LandingPage.tsx) -----------------
+   Everything below this line is scoped to the marketing page's own class
+   names/selectors (`.landing`, `.faq-item`) and never applies to the
+   dashboard, which stays on the shared tokens/utilities above. */
+
+/* Same Geist Mono face as the dashboard (this just makes that explicit
+   rather than relying on silent inheritance from `body`) - the landing
+   page keeps its own rounded cards/spacing/color language, but reads as
+   the same product typographically instead of switching fonts. */
+.landing {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* Kept as an explicit marker on numbers/labels/code even though it's
+   currently the same face as .landing itself - these are the spots that
+   were deliberately monospace, distinct from ordinary copy, before this
+   page matched the dashboard's font. */
+.landing code,
+.landing .landing-mono {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* Hero content fades/rises in on load - same easing family as chip-enter,
+   just slower and with a larger offset for a page-level entrance. */
+@keyframes landing-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.landing-rise-in {
+  animation: landing-rise-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-rise-in {
+    animation: none;
+  }
+}
+
+/* Stat-strip ticker - two identical copies of the stats sit side by side
+   (each `shrink-0`, so the track's own width is exactly 2x one copy), and
+   the animation covers exactly one copy-width (-50% of the track's own
+   width = -100% of one copy), so the loop point is invisible. Animates
+   from -50% up to 0% (not the more common 0% to -50%) so the content
+   visibly drifts left-to-right rather than the usual ticker-scrolls-left
+   direction. Constant linear motion for the whole cycle (no hold
+   plateau) - an earlier version held the starting position for the
+   first ~12% of each cycle, but that read as the ticker repeatedly
+   stalling and restarting rather than a deliberate pause. */
+@keyframes landing-marquee {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0%);
+  }
+}
+.landing-marquee-track {
+  width: max-content;
+  animation: landing-marquee 30s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-marquee-track {
+    animation: none;
+  }
+  /* Without the animation the two copies would just sit side by side,
+     visibly duplicated - the second (aria-hidden) copy is only meant to
+     exist as scroll filler, so drop it from view too. */
+  .landing-marquee-track > :nth-child(2) {
+    display: none;
+  }
+}
+
+/* Hero "scroll down" cue - a small vertical nudge on the chevron, not the
+   whole label, so the hint reads as a gesture rather than distracting
+   motion. */
+@keyframes landing-scroll-cue {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+.landing-scroll-cue {
+  animation: landing-scroll-cue 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-scroll-cue {
+    animation: none;
+  }
 }

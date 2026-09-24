@@ -69,14 +69,20 @@ class CourseHistoryProvider:
         self._sections = pd.read_parquet(course_section_stats_path)
 
     def list_catalog(self) -> dict[str, list[str]]:
-        """All (subject, course) pairs with ANY term-history data
+        """All (subject, course) pairs with ANY real term-history data
         (1996-2025), regardless of whether the predictor has PAIR-era
         (<=2016W) offerings for them. Merged with the predictor's own,
         narrower catalog in api/model_service.py::get_catalog() - see that
         function's docstring for why courses introduced after 2016 need
-        this table to show up in search at all."""
+        this table to show up in search at all.
+
+        Excludes courses whose every term row has a null `avg` - these
+        exist in the raw table (enrollment-only records with no reported
+        grades) but carry zero real historical numbers, so listing them in
+        search would offer a course with nothing to show once selected."""
+        with_grades = self._stats.dropna(subset=["avg"])
         catalog: dict[str, list[str]] = {}
-        for subject, group in self._stats.groupby("subject"):
+        for subject, group in with_grades.groupby("subject"):
             catalog[subject] = sorted(group["course"].unique().tolist())
         return catalog
 

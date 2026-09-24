@@ -35,10 +35,8 @@ export default function WorkdayUpload() {
           setDragOver(false);
           handleFile(e.dataTransfer.files?.[0] ?? null);
         }}
-        className={`h-48 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center text-center gap-2 p-6 cursor-pointer transition-colors ${
-          dragOver
-            ? "border-blue-500 bg-blue-500/5"
-            : "border-[var(--color-border-strong)] hover:bg-[var(--color-hover-surface)]"
+        className={`h-48 border-2 border-dashed flex flex-col items-center justify-center text-center gap-2 p-6 cursor-pointer transition-colors ${
+          dragOver ? "border-accent" : "border-[var(--color-border-strong)] hover:bg-[var(--color-hover-surface)]"
         }`}
       >
         <input
@@ -50,7 +48,7 @@ export default function WorkdayUpload() {
         />
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- local object URL preview, not a served asset
-          <img src={previewUrl} alt="Workday schedule screenshot" className="max-h-40 rounded-lg object-contain" />
+          <img src={previewUrl} alt="Workday schedule screenshot" className="max-h-40 object-contain" />
         ) : (
           <>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="text-[var(--color-text-subtle)]">
@@ -86,7 +84,7 @@ export default function WorkdayUpload() {
       <button
         disabled={!file}
         title="Reading courses from a screenshot is coming soon"
-        className="self-start flex items-center gap-2 rounded-md bg-blue-600 text-white px-5 py-2.5 text-sm font-bold disabled:opacity-40 hover:bg-blue-700 transition-colors"
+        className="self-start flex items-center gap-2 bg-accent text-on-accent px-5 py-2.5 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
       >
         Extract courses
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">

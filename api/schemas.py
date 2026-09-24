@@ -4,8 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-MAX_COURSES_PER_REQUEST = 5
-
 
 class CourseRequest(BaseModel):
     subject: str = Field(..., examples=["CPSC"], description="UBC subject code, e.g. CPSC")
@@ -27,7 +25,7 @@ class Weights(BaseModel):
 
 
 class PredictRequest(BaseModel):
-    courses: list[CourseRequest] = Field(..., min_length=1, max_length=MAX_COURSES_PER_REQUEST)
+    courses: list[CourseRequest] = Field(..., min_length=1)
     weights: Weights | None = Field(
         None,
         description=(

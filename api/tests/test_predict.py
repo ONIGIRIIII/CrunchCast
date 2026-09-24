@@ -205,10 +205,11 @@ def test_course_history_no_best_instructor_with_fewer_than_two_instructors():
             assert t["best_instructor"] is None
 
 
-def test_predict_rejects_more_than_five_courses():
+def test_predict_accepts_more_than_five_courses():
     courses = [{"subject": "CPSC", "course": "110"}] * 6
     response = client.post("/predict", json={"courses": courses})
-    assert response.status_code == 422
+    assert response.status_code == 200
+    assert response.json()["n_courses"] == 6
 
 
 def test_predict_accepts_five_courses():

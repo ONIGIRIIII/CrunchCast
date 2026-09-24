@@ -29,13 +29,13 @@ export default function SaveCollectionModal({ open, courseCount, onClose, onSave
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-10 px-4">
       <div className="absolute inset-0 bg-black/40" onClick={close} />
-      <div className="relative w-full max-w-sm rounded-2xl bg-[var(--color-surface-raised)] border border-[var(--color-border)] p-6 shadow-lg">
+      <div className="relative w-full max-w-sm bg-[var(--color-surface-raised)] border border-[var(--color-border-strong)] p-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-bold">Save this term</h2>
           <button
             onClick={close}
             aria-label="Close"
-            className="rounded-full w-6 h-6 flex items-center justify-center text-sm text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)]"
+            className="w-6 h-6 flex items-center justify-center text-sm text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)]"
           >
             ×
           </button>
@@ -57,7 +57,7 @@ export default function SaveCollectionModal({ open, courseCount, onClose, onSave
             if (e.key === "Enter") save();
           }}
           maxLength={60}
-          className="w-full rounded-md border border-[var(--color-border-strong)] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+          className="w-full border border-[var(--color-border-strong)] bg-transparent px-3 py-2.5 text-sm focus:outline focus:outline-2 focus:outline-accent focus:-outline-offset-1"
         />
         <div className="flex items-center justify-end gap-3 mt-5">
           <button onClick={close} className="text-xs text-[var(--color-text-subtle)] hover:text-[var(--color-foreground)]">
@@ -66,7 +66,7 @@ export default function SaveCollectionModal({ open, courseCount, onClose, onSave
           <button
             onClick={save}
             disabled={!name.trim()}
-            className="rounded-md bg-blue-600 text-white px-4 py-2 text-sm font-bold disabled:opacity-40 hover:bg-blue-700 transition-colors"
+            className="bg-[var(--color-chart-accent)] text-white px-4 py-2 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
           >
             Save
           </button>

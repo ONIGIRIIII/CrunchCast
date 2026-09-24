@@ -29,7 +29,7 @@ root). Docs at `http://127.0.0.1:8000/docs`.
   estimates) and `/history` has real data for it. See
   `model_service.py::get_catalog`.
 - `POST /predict` - body: `{"courses": [{"subject": "CPSC", "course": "110", "session": "W"}, ...], "weights": {...}}`
-  (1-5 courses, `session` optional, defaults to `"W"`; `weights` optional).
+  (1 or more courses, `session` optional, defaults to `"W"`; `weights` optional).
   Returns per-course difficulty plus a credit-weighted term-level score.
   `weights` is `{grade, failrisk, variance, classsize}` (each >= 0, need not
   sum to 1) - when present, every course/term response also includes a
