@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: crunchcast-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --app-dir api
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: API_CORS_ORIGINS
+        value: "*"
