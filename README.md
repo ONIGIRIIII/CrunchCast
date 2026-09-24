@@ -10,6 +10,10 @@ Built as a portfolio project for a data science / AI role. Code quality, honest
 evaluation, and candid documentation of what the model does and doesn't measure
 matter as much as the app working.
 
+**Live demo:** [crunch-cast.vercel.app](https://crunch-cast.vercel.app) (frontend
+on Vercel, API on Render's free tier - the first request after a few idle
+minutes can take 30-50s while it wakes back up).
+
 ## The problem and the honest answer
 
 There is no public "how hard is this course" label for UBC courses, so this
