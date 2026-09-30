@@ -103,10 +103,18 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {}
 
+/** The API's own message when it sent a plain-string `detail` (validation
+ * errors, and the rate limiter's "try again in N seconds"), otherwise
+ * `fallback`. */
+async function apiError(response: Response, fallback: string): Promise<ApiError> {
+  const body = await response.json().catch(() => null);
+  return new ApiError(typeof body?.detail === "string" ? body.detail : `${fallback} (${response.status})`);
+}
+
 export async function getCourseCatalog(): Promise<Record<string, string[]>> {
   const response = await fetch(`${API_URL}/courses`);
   if (!response.ok) {
-    throw new ApiError(`Failed to load course catalog (${response.status})`);
+    throw await apiError(response, "Failed to load course catalog");
   }
   const body: { subjects: Record<string, string[]> } = await response.json();
   return body.subjects;
@@ -117,7 +125,7 @@ export async function getCourseHistory(subject: string, course: string): Promise
     `${API_URL}/courses/${encodeURIComponent(subject)}/${encodeURIComponent(course)}/history`
   );
   if (!response.ok) {
-    throw new ApiError(`Failed to load course history (${response.status})`);
+    throw await apiError(response, "Failed to load course history");
   }
   return response.json();
 }
@@ -133,10 +141,7 @@ export async function predictTerm(
   });
 
   if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    const detail =
-      typeof body?.detail === "string" ? body.detail : `Request failed (${response.status})`;
-    throw new ApiError(detail);
+    throw await apiError(response, "Request failed");
   }
 
   return response.json();

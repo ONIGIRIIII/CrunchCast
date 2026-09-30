@@ -93,7 +93,7 @@ export default function PersonalizationQuiz({ open, onClose, onComplete }: Props
                   onClick={() => setAnswers((prev) => ({ ...prev, [question.id]: value }))}
                   className={`flex-1 min-w-0 max-md:min-h-11 border py-2.5 text-xs font-bold transition-colors ${
                     selected
-                      ? "bg-[var(--color-chart-accent)] border-[var(--color-chart-accent)] text-white"
+                      ? "bg-[var(--color-chart-accent)] border-[var(--color-chart-accent)] text-on-chart-accent"
                       : "border-[var(--color-border-strong)] hover:bg-[var(--color-hover-surface)]"
                   }`}
                 >
@@ -124,7 +124,7 @@ export default function PersonalizationQuiz({ open, onClose, onComplete }: Props
           <button
             onClick={next}
             disabled={!answered}
-            className="tap-target bg-[var(--color-chart-accent)] text-white px-5 py-2.5 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
+            className="tap-target bg-[var(--color-chart-accent)] text-on-chart-accent px-5 py-2.5 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
           >
             {isLast ? "See my crunch weights" : "Next"}
           </button>

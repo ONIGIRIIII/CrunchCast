@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ApiError, predictTerm, type CourseInput, type Weights } from "@/lib/api";
 import { loadWeights } from "@/lib/weights";
 import { saveDraftTerm } from "@/lib/draftTerm";
 import { loadTheme, saveTheme, type Theme } from "@/lib/theme";
+import { CONTACT_EMAIL, GITHUB_URL, LINKEDIN_URL } from "@/lib/site";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import CourseSearch from "./CourseSearch";
 import SignalCards from "./SignalCards";
 import ExampleCourses from "./ExampleCourses";
@@ -148,6 +151,7 @@ export default function LandingPage() {
   const [theme, setTheme] = useState<Theme>("dark");
   const [menuOpen, setMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   useEffect(() => {
     // Mobile nav dropdown closes on Escape or any tap outside the header.
@@ -434,10 +438,10 @@ export default function LandingPage() {
                     className="tap-target shrink-0 flex items-center justify-center gap-2 bg-accent text-on-accent px-6 py-2.5 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
                   >
                     {loading ? (
-                      "Predicting..."
+                      "Scoring..."
                     ) : (
                       <>
-                        Predict
+                        Score my term
                         <IconArrowRight className="w-3.5 h-3.5" />
                       </>
                     )}
@@ -520,8 +524,20 @@ export default function LandingPage() {
                   reasonable middle ground, not a pixel-exact match in every
                   state. Fluid between those two old fixed steps (410 at
                   lg, 490 at xl) rather than jumping between them. */}
-              <div className="relative w-full h-[clamp(400px,32vw,490px)]">
-                <CourseGraph courses={courses} />
+              <div
+                className="relative w-full h-[clamp(400px,32vw,490px)]"
+                role="img"
+                aria-label={
+                  courses.length > 0
+                    ? `3D graph linking your term to ${courses.map((c) => `${c.subject} ${c.course}`).join(", ")}`
+                    : "3D graph of a term and its courses - add courses to see them appear"
+                }
+              >
+                {/* Only mounted where the graph is actually shown (lg+,
+                    see the hidden lg:flex column above) - below that the
+                    three.js/drei chunk (~277KB) would download and a WebGL
+                    context would spin up for an invisible element. */}
+                {isDesktop && <CourseGraph courses={courses} />}
               </div>
               <p className="landing-mono mt-4 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[var(--color-text-subtle)]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-chart-accent)]" aria-hidden="true" />
@@ -745,6 +761,29 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ---- Closing call to action ---------------------------------------
+            The page's one action, repeated once at the end: it goes back up
+            to the hero picker rather than introducing a second thing to do.
+            Glow centered on the section (offset 50%), clear of both edges. */}
+        <section
+          className="landing-glow bg-[var(--color-background)]"
+          style={{ "--glow-offset": "50%" } as CSSProperties}
+        >
+          <div className="max-w-3xl mx-auto px-gutter pb-section text-center flex flex-col items-center">
+            <h2 className="text-h2 font-black tracking-tight">Check your term before you register</h2>
+            <p className="mt-4 max-w-xl text-sm sm:text-base text-[var(--color-text-muted)] leading-relaxed">
+              Add the courses you&apos;re considering and see how each one has graded, with the numbers behind every
+              score.
+            </p>
+            <a
+              href="#picker"
+              className="mt-8 inline-flex items-center justify-center gap-2 min-h-11 bg-accent text-on-accent px-6 py-2.5 text-sm font-bold hover:opacity-85 transition-opacity"
+            >
+              Build your term
+              <IconArrowRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </section>
       </main>
 
       {/* ---- Footer ----------------------------------------------------- */}
@@ -772,8 +811,8 @@ export default function LandingPage() {
               <span className="font-black tracking-tight text-sm">CrunchCast</span>
             </div>
             <p className="text-sm text-[var(--color-text-subtle)] leading-relaxed">
-              A historical-data difficulty score for UBC courses, built on decades of real grade
-              data. Not a workload measurement. Not an official UBC tool.
+              Difficulty scores for UBC courses, built from decades of real grade data. It measures how
+              courses have graded, not workload, and isn&apos;t an official UBC tool.
             </p>
           </div>
 
@@ -783,7 +822,7 @@ export default function LandingPage() {
             <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-text-subtle)] mb-2.5">Links</p>
             <nav className="flex items-center gap-1 md:gap-4 max-md:-mx-3">
               <a
-                href="https://github.com/ONIGIRIIII/CrunchCast"
+                href={GITHUB_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="GitHub"
@@ -793,7 +832,7 @@ export default function LandingPage() {
                 <IconGithub className="w-5 h-5" />
               </a>
               <a
-                href="mailto:singhharshpreet675@gmail.com"
+                href={`mailto:${CONTACT_EMAIL}`}
                 aria-label="Email"
                 title="Email"
                 className="tap-target flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-chart-accent)] transition-colors"
@@ -801,7 +840,7 @@ export default function LandingPage() {
                 <IconEmail className="w-5 h-5" />
               </a>
               <a
-                href="https://www.linkedin.com/in/harshpreet-singh-2331762a4/"
+                href={LINKEDIN_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="LinkedIn"
@@ -812,6 +851,19 @@ export default function LandingPage() {
               </a>
             </nav>
           </div>
+        </div>
+        <div className="border-t border-[var(--color-border)]">
+          <nav
+            aria-label="Legal"
+            className="max-w-6xl mx-auto px-gutter py-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-[var(--color-text-subtle)]"
+          >
+            <Link href="/privacy" className="inline-flex items-center min-h-11 hover:text-[var(--color-foreground)] transition-colors">
+              Privacy policy
+            </Link>
+            <Link href="/terms" className="inline-flex items-center min-h-11 hover:text-[var(--color-foreground)] transition-colors">
+              Terms of use
+            </Link>
+          </nav>
         </div>
       </footer>
     </div>

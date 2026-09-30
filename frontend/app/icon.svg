@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.6 2 20 20" fill="none">
+  <!-- CrunchCast mark (same two arcs as the dashboard/footer logo). The outer
+       arc follows the browser's light/dark theme so it stays visible in
+       either tab strip; the inner arc is the accent orange. -->
+  <style>
+    .outer { stroke: #26252a; }
+    @media (prefers-color-scheme: dark) { .outer { stroke: #f2f2f3; } }
+  </style>
+  <path class="outer" d="M14.74 4.48A8 8 0 1 0 14.74 19.52" stroke-width="2.6" stroke-linecap="round" />
+  <path d="M13.2 8.71A3.5 3.5 0 1 0 13.2 15.29" stroke="#ed462d" stroke-width="2.2" stroke-linecap="round" />
+</svg>

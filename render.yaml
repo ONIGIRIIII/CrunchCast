@@ -8,5 +8,13 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      # Only the production site may call the API from a browser...
       - key: API_CORS_ORIGINS
-        value: "*"
+        value: "https://crunch-cast.vercel.app"
+      # ...plus this project's own Vercel preview deployments (per-commit and
+      # per-branch URLs, both under the harshpreets-projects team slug).
+      - key: API_CORS_ORIGIN_REGEX
+        value: "https://crunch-cast-[a-z0-9-]+-harshpreets-projects-0f61323f\\.vercel\\.app"
+      # Requests per minute per client IP (see api/rate_limit.py); 0 disables.
+      - key: API_RATE_LIMIT_PER_MINUTE
+        value: "120"

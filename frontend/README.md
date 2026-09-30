@@ -74,12 +74,21 @@ background and grid-line section division instead of card boxes.
 
 ## Structure
 
-- `app/page.tsx` - page shell.
-- `app/components/CourseBuilder.tsx` - top nav bar (logo, personalize toggle,
-  theme toggle) plus the left "Saved Terms" sidebar (collapsible to an
-  icon rail, saved collections with predict/delete actions) and the main
-  content column; owns course add/remove state, personalization state, and
-  calls the API.
+- `app/page.tsx` → `app/components/LandingPage.tsx` - the marketing page:
+  hero course picker, the "How it works" / "The honest part" / "Under the
+  hood" sections (`SignalCards.tsx`, `ExampleCourses.tsx`,
+  `MethodCards.tsx`), known limitations, FAQ, and a closing call to action.
+- `app/dashboard/page.tsx` → `app/components/Dashboard.tsx` - top nav bar
+  (logo, Saved Term, theme toggle) plus the "Saved Terms" sidebar (an
+  icon rail at `lg`+, an off-canvas drawer below it) and the main content
+  column; owns course add/remove state, personalization state, and calls
+  the API.
+- `app/privacy/page.tsx`, `app/terms/page.tsx` - privacy policy and terms
+  of use (shared shell in `app/components/LegalPage.tsx`); `app/not-found.tsx`
+  - custom 404.
+- `app/opengraph-image.tsx` (social preview card), `app/icon.svg` /
+  `favicon.ico` / `apple-icon.png`, `app/sitemap.ts`, `app/robots.ts` -
+  metadata routes, all using the constants in `lib/site.ts`.
 - `app/components/CourseSearch.tsx` - search-as-you-type autocomplete over
   `GET /courses`, with manual subject/course/session fields as a fallback.
   `GET /courses` is the union of the predictor's PAIR-era catalog and the
@@ -119,7 +128,7 @@ background and grid-line section division instead of card boxes.
   fabricated time series), in the shared `--chart-accent` orange, with
   y-axis tick labels and a dashed term-average reference line.
 - `app/components/CourseTicker.tsx` - a horizontal course-summary strip;
-  currently unmounted (not rendered by `CourseBuilder.tsx`/`TermResults.tsx`)
+  currently unmounted (not rendered by `Dashboard.tsx`/`TermResults.tsx`)
   but kept styled in step with the rest of the theme in case it's wired
   back in.
 - `app/components/CourseHistoryPanel.tsx` - per-course "View by term"

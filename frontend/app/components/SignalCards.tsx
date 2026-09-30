@@ -224,13 +224,17 @@ function SpreadVisual({ shown }: VisualProps) {
   );
 }
 
-// Lecture-hall seats in rows around a podium, front row first.
+// Lecture-hall seats in rows around a podium, front row first. Coordinates
+// are rounded to 2 decimals: the server (Node) and the browser can compute
+// Math.cos/sin differently in the last digit, and unrounded values made the
+// server-rendered cx/cy attributes fail to hydrate.
 const HALL_ROWS = [24, 36, 48, 60, 72, 84];
+const round2 = (v: number) => Math.round(v * 100) / 100;
 const SEATS = HALL_ROWS.flatMap((r, row) => {
   const n = Math.floor((Math.PI * r) / 10.5);
   return Array.from({ length: n }, (_, j) => {
     const angle = Math.PI - ((j + 0.5) * Math.PI) / n;
-    return { x: 120 + r * Math.cos(angle), y: 96 - r * Math.sin(angle), row, j };
+    return { x: round2(120 + r * Math.cos(angle)), y: round2(96 - r * Math.sin(angle)), row, j };
   });
 });
 const FILLED_SEATS = Math.round(SEATS.length * 0.82);

@@ -10,11 +10,21 @@ Or from the repo root:
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Path, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from model_service import get_catalog, get_course_history, get_history_provider, get_predictor, predict_term
-from schemas import CourseCatalogResponse, CourseHistoryResponse, PredictRequest, PredictResponse
+from rate_limit import RateLimiter, client_key, retry_after_seconds
+from schemas import (
+    COURSE_PATTERN,
+    SUBJECT_PATTERN,
+    CourseCatalogResponse,
+    CourseHistoryResponse,
+    PredictRequest,
+    PredictResponse,
+)
 
 
 @asynccontextmanager
@@ -37,16 +47,53 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS origins for the frontend, comma-separated. Defaults to allow-all for
-# local development; set API_CORS_ORIGINS to the deployed frontend URL(s)
-# in production (see README / deployment config).
-cors_origins = os.environ.get("API_CORS_ORIGINS", "*").split(",")
+# Per-client request limit (see rate_limit.py). API_RATE_LIMIT_PER_MINUTE
+# overrides the default; 0 disables it. /health is exempt so Render's health
+# checks never count, and CORS preflights (OPTIONS) are exempt so a limited
+# client still gets a readable 429 rather than a CORS failure.
+RATE_LIMIT_EXEMPT_PATHS = {"/health"}
+rate_limiter = RateLimiter(int(os.environ.get("API_RATE_LIMIT_PER_MINUTE", "120")), window=60.0)
+
+
+@app.middleware("http")
+async def rate_limit(request: Request, call_next):
+    if request.method == "OPTIONS" or request.url.path in RATE_LIMIT_EXEMPT_PATHS:
+        return await call_next(request)
+    wait = rate_limiter.check(client_key(request))
+    if wait > 0:
+        seconds = retry_after_seconds(wait)
+        return JSONResponse(
+            status_code=429,
+            content={"detail": f"Too many requests - try again in {seconds} seconds."},
+            headers={"Retry-After": str(seconds)},
+        )
+    return await call_next(request)
+
+
+# CORS for the frontend. API_CORS_ORIGINS is a comma-separated list of exact
+# origins (default "*" for local development); API_CORS_ORIGIN_REGEX
+# optionally allows a pattern too - production uses it for Vercel preview
+# deployment URLs (see render.yaml). Added after the rate limiter so it wraps
+# it: 429 responses carry CORS headers and the browser can read them.
+cors_origins = [origin.strip() for origin in os.environ.get("API_CORS_ORIGINS", "*").split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origin_regex=os.environ.get("API_CORS_ORIGIN_REGEX") or None,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    """Readable 422s - the frontend shows `detail` directly, so collapse
+    FastAPI's default list of error objects into one sentence."""
+    problems = []
+    for error in exc.errors():
+        location = ".".join(str(part) for part in error.get("loc", ()) if part not in ("body", "path", "query"))
+        problems.append(f"{location}: {error.get('msg')}" if location else str(error.get("msg")))
+    return JSONResponse(status_code=422, content={"detail": "Invalid request - " + "; ".join(problems)})
 
 
 @app.get("/health")
@@ -67,7 +114,10 @@ def courses():
 
 
 @app.get("/courses/{subject}/{course}/history", response_model=CourseHistoryResponse)
-def course_history(subject: str, course: str):
+def course_history(
+    subject: str = Path(..., pattern=SUBJECT_PATTERN, description="UBC subject code, e.g. CPSC"),
+    course: str = Path(..., pattern=COURSE_PATTERN, description="Course number, e.g. 110 or 317A"),
+):
     """Real per-term stats for a course (avg, std dev, high, low, fail
     rate, enrolled), most recent term first, spanning 1996 through whatever
     is most recently available (currently 2025W). NOT the same data window

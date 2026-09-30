@@ -52,7 +52,11 @@ export default function RiskGauge({
   const base = { x: CX + ux * baseR, y: CY + uy * baseR };
   const base1 = { x: base.x + px * ARROW_HALF_WIDTH, y: base.y + py * ARROW_HALF_WIDTH };
   const base2 = { x: base.x - px * ARROW_HALF_WIDTH, y: base.y - py * ARROW_HALF_WIDTH };
-  const arrowPoints = `${tip.x},${tip.y} ${base1.x},${base1.y} ${base2.x},${base2.y}`;
+  // Fixed precision: this is server-rendered on the landing page, and the
+  // server and browser can disagree on the last digit of Math.cos/sin -
+  // unrounded, that's a hydration mismatch on the `points` attribute.
+  const pt = (p: { x: number; y: number }) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`;
+  const arrowPoints = `${pt(tip)} ${pt(base1)} ${pt(base2)}`;
 
   return (
     <svg

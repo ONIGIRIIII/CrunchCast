@@ -82,7 +82,15 @@ export default function TermScoreChart({ points, averageScore }: TermScoreChartP
         ))}
       </div>
       <div className="relative flex-1">
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full h-full" preserveAspectRatio="none">
+      <svg
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        className="w-full h-full"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={`Difficulty score by course: ${points
+          .map((p) => `${p.subject} ${p.course} ${p.score.toFixed(0)}`)
+          .join(", ")}${averageScore != null ? `; term average ${averageScore.toFixed(0)}` : ""}`}
+      >
         <defs>
           <linearGradient id="term-score-fill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--color-chart-accent)" stopOpacity="0.22" />

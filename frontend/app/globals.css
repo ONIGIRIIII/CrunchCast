@@ -10,13 +10,19 @@
   --border: #27272a;
   --border-strong: #3f3f46;
   --text-muted: #a3a3a3;
-  --text-subtle: #737373;
+  /* Text colors are tuned to WCAG AA (4.5:1) against background, surface
+     and surface-raised in both themes - re-check contrast if you change
+     any of these or the surfaces. */
+  --text-subtle: #848484;
   --hover-surface: #212124;
   --hatch-rgb: 255 255 255;
   --severity-hard: #ef4444;
   --severity-moderate: #f59e0b;
   --severity-easy: #22c55e;
-  --chart-accent: #ed462d;
+  --chart-accent: #ed482f;
+  /* Text on an accent-filled button: near-black here (white on this orange
+     is only 3.8:1), white in light mode. */
+  --on-chart-accent: #0a0a0b;
   --accent: var(--foreground);
   --on-accent: var(--background);
   --glass-tint: rgba(0, 0, 0, 0.22);
@@ -36,13 +42,16 @@
   --border: #ddd9d2;
   --border-strong: #c7c2b8;
   --text-muted: #57545c;
-  --text-subtle: #75726f;
+  --text-subtle: #6c6966;
   --hover-surface: #e3e1db;
   --hatch-rgb: 0 0 0;
-  --severity-hard: #dc2626;
-  --severity-moderate: #d97706;
-  --severity-easy: #16a34a;
-  --chart-accent: #c8391f;
+  /* Darker than the dark theme's severity hues - the brighter amber/green
+     were under 3:1 as text on these light surfaces. */
+  --severity-hard: #cd2121;
+  --severity-moderate: #9d5604;
+  --severity-easy: #107837;
+  --chart-accent: #c1371e;
+  --on-chart-accent: #ffffff;
   --glass-tint: rgba(20, 18, 14, 0.06);
   --glass-highlight: rgba(255, 255, 255, 0.7);
   color-scheme: light;
@@ -62,6 +71,7 @@
   --color-severity-moderate: var(--severity-moderate);
   --color-severity-easy: var(--severity-easy);
   --color-chart-accent: var(--chart-accent);
+  --color-on-chart-accent: var(--on-chart-accent);
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
   --font-sans: var(--font-geist-mono);

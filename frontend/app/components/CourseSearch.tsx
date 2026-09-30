@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { ApiError, getCourseCatalog } from "@/lib/api";
 
 interface Match {
@@ -91,7 +91,26 @@ export default function CourseSearch({
 
   const freeTextMatch = parseFreeText(query);
   const freeTextKey = freeTextMatch ? `${freeTextMatch.subject}-${freeTextMatch.course}` : null;
-  const canAdd = freeTextMatch != null && !(freeTextKey && addedKeys.has(freeTextKey));
+  const alreadyAdded = freeTextKey != null && addedKeys.has(freeTextKey);
+  const canAdd = freeTextMatch != null && !alreadyAdded;
+
+  // Validation feedback for what's typed, shown in the dropdown and read out
+  // to screen readers (aria-describedby + a polite live region) - so "+"
+  // being disabled or Enter doing nothing never happens without a reason.
+  const typed = query.trim() !== "";
+  const noCatalogMatch = typed && !browseAll && catalog != null && matches.length === 0;
+  const hint = !typed
+    ? null
+    : alreadyAdded
+      ? `${freeTextMatch!.subject} ${freeTextMatch!.course} is already in your term.`
+      : noCatalogMatch && freeTextMatch
+        ? `No matches in the catalog - press Enter or + to add ${freeTextMatch.subject} ${freeTextMatch.course} anyway.`
+        : noCatalogMatch
+          ? "No matches. Course codes look like CPSC 110."
+          : null;
+  const invalid = noCatalogMatch && !freeTextMatch;
+  const inputId = useId();
+  const hintId = `${inputId}-hint`;
 
   function handleAdd() {
     if (!freeTextMatch) return;
@@ -119,7 +138,10 @@ export default function CourseSearch({
         {/* 16px (text-base) below sm - iOS Safari zooms the whole page in on
             focus for any input under 16px, and it stays zoomed afterward. */}
         <input
-          id="course-search"
+          id={inputId}
+          aria-label="Search for a course to add"
+          aria-invalid={invalid || undefined}
+          aria-describedby={hint ? hintId : undefined}
           placeholder={placeholder}
           value={query}
           onFocus={() => {
@@ -145,7 +167,7 @@ export default function CourseSearch({
           disabled={query.trim() !== "" && !canAdd}
           aria-label={query.trim() ? "Add course" : "Browse all courses"}
           title={query.trim() ? "Add course" : "Browse all courses"}
-          className="tap-target shrink-0 bg-[var(--color-chart-accent)] text-black w-9 h-9 flex items-center justify-center disabled:opacity-40 hover:opacity-85 transition-opacity"
+          className="tap-target shrink-0 bg-[var(--color-chart-accent)] text-on-chart-accent w-9 h-9 flex items-center justify-center disabled:opacity-40 hover:opacity-85 transition-opacity"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -157,9 +179,13 @@ export default function CourseSearch({
         <ul className="absolute z-30 mt-1.5 w-full max-h-72 overflow-y-auto border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)]">
           {loading && <li className="px-3.5 py-2.5 text-sm text-[var(--color-text-subtle)]">Loading...</li>}
           {error && <li className="px-3.5 py-2.5 text-sm text-severity-hard">{error}</li>}
-          {!loading && !error && matches.length === 0 && (
-            <li className="px-3.5 py-2.5 text-sm text-[var(--color-text-subtle)]">
-              No matches - hit &quot;Add course&quot; to add it directly.
+          {!loading && !error && hint && (
+            <li
+              id={hintId}
+              aria-live="polite"
+              className={`px-3.5 py-2.5 text-sm ${invalid ? "text-severity-moderate" : "text-[var(--color-text-muted)]"}`}
+            >
+              {hint}
             </li>
           )}
           {matches.map(({ subject, course }) => {

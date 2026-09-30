@@ -5,9 +5,20 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+# Accepted shapes for course identifiers - the same rule the frontend's
+# course search uses (a 2-6 letter subject, a 3-digit level plus an optional
+# short suffix like the "A" in 317A). Anything else can't be a real UBC
+# course, so it's rejected up front instead of reaching the model.
+SUBJECT_PATTERN = r"^[A-Za-z]{2,6}$"
+COURSE_PATTERN = r"^[0-9]{3}[0-9A-Za-z]{0,3}$"
+
+# Far more than any real term; bounds how much work one request can ask for.
+MAX_COURSES_PER_REQUEST = 25
+
+
 class CourseRequest(BaseModel):
-    subject: str = Field(..., examples=["CPSC"], description="UBC subject code, e.g. CPSC")
-    course: str = Field(..., examples=["110"], description="Course number, e.g. 110")
+    subject: str = Field(..., pattern=SUBJECT_PATTERN, examples=["CPSC"], description="UBC subject code, e.g. CPSC")
+    course: str = Field(..., pattern=COURSE_PATTERN, examples=["110"], description="Course number, e.g. 110 or 317A")
     session: Literal["S", "W"] = Field(
         "W", description="Summer (S) or Winter (W) session; only affects historical lookup"
     )
@@ -18,14 +29,14 @@ class Weights(BaseModel):
     the frontend's personalization quiz. Need not sum to 1 - normalized
     server-side (model/predict.py). All-zero falls back to equal weights."""
 
-    grade: float = Field(0.25, ge=0, description="GPA/grade impact")
-    failrisk: float = Field(0.25, ge=0, description="Risk of failing/retaking")
-    variance: float = Field(0.25, ge=0, description="Grading unpredictability")
-    classsize: float = Field(0.25, ge=0, description="Number of people taking the course")
+    grade: float = Field(0.25, ge=0, le=100, description="GPA/grade impact")
+    failrisk: float = Field(0.25, ge=0, le=100, description="Risk of failing/retaking")
+    variance: float = Field(0.25, ge=0, le=100, description="Grading unpredictability")
+    classsize: float = Field(0.25, ge=0, le=100, description="Number of people taking the course")
 
 
 class PredictRequest(BaseModel):
-    courses: list[CourseRequest] = Field(..., min_length=1)
+    courses: list[CourseRequest] = Field(..., min_length=1, max_length=MAX_COURSES_PER_REQUEST)
     weights: Weights | None = Field(
         None,
         description=(

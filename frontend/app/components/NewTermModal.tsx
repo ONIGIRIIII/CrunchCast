@@ -100,7 +100,7 @@ export default function NewTermModal({ open, onClose, onCreate, loading, error }
           <button
             onClick={predict}
             disabled={courses.length === 0 || loading}
-            className="tap-target bg-[var(--color-chart-accent)] text-white px-4 py-2 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
+            className="tap-target bg-[var(--color-chart-accent)] text-on-chart-accent px-4 py-2 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
           >
             {loading ? "Predicting..." : "Predict"}
           </button>
