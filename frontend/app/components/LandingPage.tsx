@@ -348,7 +348,7 @@ export default function LandingPage() {
             headline, smaller graph, see below) rather than from inset
             margins on the section, which made it feel like a bounded panel
             rather than a hero. The fixed header overlays the top of it, so
-            content gets pt-[68px] (the header's own height, see its
+            content gets pt-[4.25rem] (the header's own height, see its
             comment) to clear it. Two columns at lg+: copy/picker on the
             left, an interactive 3D course graph on the right (hidden below
             lg - dragging to orbit it would otherwise fight touch-scroll on
@@ -359,7 +359,7 @@ export default function LandingPage() {
           className="landing-glow overflow-hidden min-h-[100svh] flex flex-col bg-[var(--color-background)]"
           style={{ "--glow-strength": "22%" } as CSSProperties}
         >
-          <div className="flex-1 w-full flex flex-col items-center justify-center px-gutter pt-[68px] pb-6 sm:pb-8">
+          <div className="flex-1 w-full flex flex-col items-center justify-center px-gutter pt-[4.25rem] pb-6 sm:pb-8">
           <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-stretch gap-12 lg:gap-hero">
             <div className="w-full min-w-0 lg:w-[50%] flex flex-col items-start text-left">
               {/* CrunchCast is the actual hero here - the brand name, not
@@ -400,7 +400,7 @@ export default function LandingPage() {
 
               <div
                 id="picker"
-                className="landing-rise-in scroll-mt-[84px] w-full max-w-xl mt-8 mb-[4.5rem] lg:mb-8"
+                className="landing-rise-in scroll-mt-[5.25rem] w-full max-w-xl mt-8 mb-[4.5rem] lg:mb-8"
                 style={{ animationDelay: "180ms" }}
               >
                 {/* mb reserves room for the out-of-flow added-courses tray
@@ -525,7 +525,7 @@ export default function LandingPage() {
                   state. Fluid between those two old fixed steps (410 at
                   lg, 490 at xl) rather than jumping between them. */}
               <div
-                className="relative w-full h-[clamp(400px,32vw,490px)]"
+                className="relative w-full h-[clamp(25rem,32vw,30.625rem)]"
                 role="img"
                 aria-label={
                   courses.length > 0
@@ -600,14 +600,14 @@ export default function LandingPage() {
         {/* ---- How it works: four signals --------------------------------- */}
         <section
           id="how-it-works"
-          className="landing-glow landing-divider scroll-mt-[68px] bg-[var(--color-background)]"
+          className="landing-glow landing-divider scroll-mt-[4.25rem] bg-[var(--color-background)]"
           // Straight after the hero with no divider line, so the glow sits
           // lower instead of starting at a hard edge - centered on, and tall
           // enough to cover, the whole heading + subtitle block. Offset tracks
           // the section's own top padding so it stays on the text at every
           // width, and is always past the glow's ~210px fade radius, so it
           // never reaches the top edge.
-          style={{ "--glow-offset": "calc(var(--spacing-section) + 120px)", "--glow-size": "1100px 300px" } as CSSProperties}
+          style={{ "--glow-offset": "calc(var(--spacing-section) + 7.5rem)", "--glow-size": "68.75rem 18.75rem" } as CSSProperties}
         >
           <div className="max-w-6xl mx-auto px-gutter py-section">
             <SectionHeading
@@ -623,7 +623,7 @@ export default function LandingPage() {
         </section>
 
         {/* ---- What it measures (and doesn't) ------------------------------ */}
-        <section id="what-it-measures" className="landing-glow landing-divider scroll-mt-[68px] bg-[var(--color-background)]">
+        <section id="what-it-measures" className="landing-glow landing-divider scroll-mt-[4.25rem] bg-[var(--color-background)]">
           <div className="max-w-6xl mx-auto px-gutter py-section">
             <SectionHeading
               eyebrow="The honest part"
@@ -660,7 +660,7 @@ export default function LandingPage() {
         </section>
 
         {/* ---- Under the hood: data / model / personalization -------------- */}
-        <section id="methodology" className="landing-glow landing-divider scroll-mt-[68px] bg-[var(--color-background)]">
+        <section id="methodology" className="landing-glow landing-divider scroll-mt-[4.25rem] bg-[var(--color-background)]">
           <div className="max-w-6xl mx-auto px-gutter py-section">
             <SectionHeading
               eyebrow="Under the hood"
@@ -700,7 +700,7 @@ export default function LandingPage() {
         </section>
 
         {/* ---- FAQ ---------------------------------------------------------- */}
-        <section id="faq" className="landing-glow scroll-mt-[68px] bg-[var(--color-background)]">
+        <section id="faq" className="landing-glow scroll-mt-[4.25rem] bg-[var(--color-background)]">
           <div className="max-w-3xl mx-auto px-gutter py-section">
             <SectionHeading eyebrow="FAQ" title="Common questions" centered />
             {/* Separate cards rather than one divided box, so the open one can

@@ -182,6 +182,22 @@ body {
    names/selectors (`.landing`, `.faq-item`) and never applies to the
    dashboard, which stays on the shared tokens/utilities above. */
 
+/* Marketing pages (landing, privacy/terms, 404 - everything with a .landing
+   root) render at 90% scale on desktop: the root font size drops to 90%,
+   and since nearly every size here is in rem (Tailwind spacing/type,
+   container widths, the clamp() tokens' caps, the glows), the whole page
+   comes out as it looks at 90% browser zoom. Done with font-size rather
+   than CSS zoom/transform, both of which were tried earlier for page
+   scaling and reverted for breaking on macOS Safari/Arc. Breakpoints are
+   unaffected (media-query rem always uses the browser default). Kept off
+   below lg so phone/tablet text doesn't shrink, and off the dashboard,
+   whose header/sidebar gridline is locked to pixel heights (73px). */
+@media (min-width: 64rem) {
+  :root:has(.landing) {
+    font-size: 90%;
+  }
+}
+
 /* Same Geist Mono face as the dashboard (this just makes that explicit
    rather than relying on silent inheritance from `body`) - the landing
    page keeps its own card/spacing/color language, but reads as
@@ -205,9 +221,11 @@ body {
    stacking context (isolation), so it sits above the section's solid
    background but behind its content. The hero runs it a little stronger
    (--glow-strength) as the page's opening. --glow-offset pushes the glow's
-   center down from the top edge: far enough (past ~180px, where this
-   gradient fades out) and the glow no longer touches the edge at all, for a
-   section with no divider line above it to "emit" from. --glow-size (the
+   center down from the top edge: far enough (past ~11.4rem, ~180px at full
+   size, where this gradient fades out) and the glow no longer touches the
+   edge at all, for a section with no divider line above it to "emit" from.
+   Sizes are in rem so the glows shrink with the page's 90% desktop scale
+   (see :root:has(.landing) above). --glow-size (the
    ellipse's width and height) stretches it over a taller block of content. */
 .landing-glow {
   position: relative;
@@ -220,7 +238,7 @@ body {
   z-index: -1;
   pointer-events: none;
   background: radial-gradient(
-    ellipse var(--glow-size, 950px 260px) at 50% var(--glow-offset, 0px),
+    ellipse var(--glow-size, 59.375rem 16.25rem) at 50% var(--glow-offset, 0px),
     color-mix(in srgb, var(--color-chart-accent) var(--glow-strength, 16%), transparent),
     transparent 70%
   );
@@ -251,7 +269,7 @@ body {
       )
       bottom center / min(72rem, 100%) 1px no-repeat,
     radial-gradient(
-      ellipse 950px 260px at 50% 100%,
+      ellipse 59.375rem 16.25rem at 50% 100%,
       color-mix(in srgb, var(--color-chart-accent) var(--glow-strength, 16%), transparent),
       transparent 70%
     );
