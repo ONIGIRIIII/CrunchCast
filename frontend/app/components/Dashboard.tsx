@@ -20,14 +20,31 @@ import SaveCollectionModal from "./SaveCollectionModal";
 import NewTermModal from "./NewTermModal";
 import DifficultyBadge from "./DifficultyBadge";
 
-const SIDEBAR_WIDTH = 260;
+// Rail widths in rem (260px / 64px at the default 16px root) so they scale
+// with the rest of the dashboard - see :root:has(.app-dashboard) in
+// globals.css.
+const SIDEBAR_WIDTH = "16.25rem";
+const RAIL_WIDTH = "4rem";
+
+// Term Builder column width at lg+, exposed as --tb-w on the dashboard root
+// and read by both the header's title column and TermResults' grid, so the
+// header divider always sits on the Term Builder / Overview line.
+// - Saved Terms collapsed: Term Builder gets 25% of the space beside the
+//   rail; Overview / Course Description get the other 75%.
+// - Saved Terms open: Saved Terms + Term Builder together take 35% of the
+//   page; Overview / Course Description get the other 65%.
+// Never narrower than 18rem (the "Term Builder" heading and course rows
+// still fit there), so on smaller laptops the split leans a little past
+// 25% / 35%; from ~1440px up it's exact.
+const TERM_BUILDER_WIDTH_COLLAPSED = `max(18rem, (100vw - ${RAIL_WIDTH}) * 0.25)`;
+const TERM_BUILDER_WIDTH_OPEN = `max(18rem, 100vw * 0.35 - ${SIDEBAR_WIDTH})`;
 // Matches Tailwind's `lg` breakpoint - the width at which the inline Saved
 // Terms rail replaces the mobile drawer.
 const DESKTOP_QUERY = "(min-width: 1024px)";
 
 function EmptyResults() {
   return (
-    <div className="border border-dashed border-[var(--color-border-strong)] flex flex-col items-center justify-center text-center gap-2 p-12 min-h-[420px]">
+    <div className="border border-dashed border-[var(--color-border-strong)] flex flex-col items-center justify-center text-center gap-2 p-12 min-h-[26.25rem]">
       <p className="text-sm font-medium text-[var(--color-foreground)]">No prediction yet</p>
       <p className="text-xs text-[var(--color-text-subtle)] max-w-xs">
         Add courses above, then hit &quot;Predict&quot; to see your term risk breakdown here.
@@ -38,7 +55,7 @@ function EmptyResults() {
 
 function PredictingPlaceholder() {
   return (
-    <div className="border border-dashed border-[var(--color-border-strong)] flex flex-col items-center justify-center text-center gap-2 p-12 min-h-[420px]">
+    <div className="border border-dashed border-[var(--color-border-strong)] flex flex-col items-center justify-center text-center gap-2 p-12 min-h-[26.25rem]">
       <p className="text-sm font-medium text-[var(--color-foreground)]">Predicting...</p>
       <p className="text-xs text-[var(--color-text-subtle)] max-w-xs">Scoring your term, one moment.</p>
     </div>
@@ -82,7 +99,7 @@ function SavedTermsPanel({
       }}
     >
       <div
-        className={`flex items-center h-[69px] sm:h-[73px] px-4 border-b border-[var(--color-border)] shrink-0 ${
+        className={`flex items-center h-[4.3125rem] sm:h-[4.5625rem] px-4 border-b border-[var(--color-border)] shrink-0 ${
           expanded ? "justify-between" : "justify-center"
         }`}
       >
@@ -115,7 +132,7 @@ function SavedTermsPanel({
         </button>
       </div>
 
-      <div className="h-[88px] flex items-center px-4 border-b border-[var(--color-border)] shrink-0">
+      <div className="h-[5.5rem] flex items-center px-4 border-b border-[var(--color-border)] shrink-0">
         <button
           onClick={onNewTerm}
           title="New Term"
@@ -402,14 +419,22 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div
+      className="app-dashboard min-h-screen flex flex-col"
+      style={
+        {
+          "--rail-w": sidebarOpen ? SIDEBAR_WIDTH : RAIL_WIDTH,
+          "--tb-w": sidebarOpen ? TERM_BUILDER_WIDTH_OPEN : TERM_BUILDER_WIDTH_COLLAPSED,
+        } as CSSProperties
+      }
+    >
       {/* Top nav bar - just logo/name now. Saved Term/Personalize/theme
           toggle live in TermResults' own "Overview" title row instead. */}
       {/* Below md the header's py-3 + 44px touch-size buttons keep it at
           about the same height as md+'s py-4 + 32px buttons. The buttons
           use tap-target-until-lg (not tap-target) so a touch device at lg+
-          never grows this row past the 73px the sidebar/Term Builder
-          gridline offsets assume. */}
+          never grows this row past the 4.5625rem (73px at full scale) the
+          sidebar/Term Builder gridline offsets assume. */}
       <header
         className="sticky top-0 z-30 flex items-center gap-2 sm:gap-4 py-3 md:py-4 border-x border-b border-[var(--color-border)] backdrop-blur-xl backdrop-saturate-150 shrink-0"
         style={{
@@ -418,7 +443,7 @@ export default function Dashboard() {
         }}
       >
         <div className="flex items-center self-stretch whitespace-nowrap -ml-px">
-          {/* Fixed 64px, centered - same width as the sidebar's own
+          {/* Fixed 4rem (64px at full scale), centered - same width as the sidebar's own
               collapsed column below, so this icon sits on the exact same
               vertical line as the ">" toggle and "+" New Term button
               instead of drifting with the header's own left padding. The
@@ -445,9 +470,8 @@ export default function Dashboard() {
             href="/"
             aria-label="CrunchCast home"
             className="shrink-0 self-stretch -my-3 md:-my-4 w-16 lg:w-[var(--rail-w)] flex items-center justify-center border-r border-[var(--color-border)] transition-[width] duration-200 hover:opacity-85"
-            style={{ "--rail-w": `${sidebarOpen ? SIDEBAR_WIDTH : 64}px` } as CSSProperties}
           >
-            <svg width="30" height="30" viewBox="-2 0 24 24" fill="none" aria-hidden="true">
+            <svg viewBox="-2 0 24 24" fill="none" aria-hidden="true" className="w-[1.875rem] h-[1.875rem]">
               <path
                 d="M14.74 4.48A8 8 0 1 0 14.74 19.52"
                 stroke="var(--color-foreground)"
@@ -462,22 +486,27 @@ export default function Dashboard() {
               />
             </svg>
           </Link>
-          {/* Second column, 420px wide only at lg+ (matching TermResults'
-              own `lg:grid-cols-[420px_1fr]`, which only kicks in at that
-              breakpoint - below it Term Builder/Overview stack instead of
-              sitting side by side, so there's no boundary to line up with).
-              Its own border-r lands exactly on the Term Builder/Overview
-              divider below; text sized up so it actually fills the column
-              instead of sitting small in a lot of empty space. */}
-          <div className="flex items-center justify-start gap-2 px-3 lg:w-[420px]">
-            <Link href="/" className="tap-target-until-lg inline-flex items-center font-black text-lg sm:text-xl lg:text-[28px] hover:opacity-85 transition-opacity">
+          {/* Second column, --tb-w wide only at lg+ (the same width as
+              TermResults' Term Builder column - see TERM_BUILDER_WIDTH_* -
+              which only sits beside Overview from lg up; below it they
+              stack, so there's no boundary to line up with). It ends
+              exactly on the Term Builder/Overview divider below and
+              animates with it when Saved Terms opens/closes. */}
+          <div className="flex items-center justify-start gap-2 px-3 lg:w-[var(--tb-w)] lg:shrink-0 lg:@container transition-[width] duration-200">
+            <Link href="/" className="tap-target-until-lg inline-flex items-center font-black text-lg sm:text-xl lg:text-[1.75rem] hover:opacity-85 transition-opacity">
               Crunch<span style={{ color: "var(--color-chart-accent)" }}>Cast</span>
             </Link>
-            {/* "| Dashboard" drops below xs - there isn't room for it next
-                to the menu/theme buttons on a phone. */}
-            <span className="hidden xs:inline text-lg sm:text-xl lg:text-[28px] text-[var(--color-text-subtle)]">|</span>
-            <span className="hidden xs:inline font-black text-lg sm:text-xl lg:text-[28px]" style={{ color: "var(--color-chart-accent)" }}>
-              Dashboard
+            {/* "| Dashboard" drops below xs (no room next to the menu/theme
+                buttons on a phone), and at lg+ whenever the column is
+                narrower than the full title needs (~23.5rem) - hiding it
+                rather than shrinking the font, since the header's height
+                (which the sidebar/Term Builder gridline rows match) comes
+                from this text size. */}
+            <span className="hidden xs:inline-flex items-center gap-2 lg:@max-[23.5rem]:hidden">
+              <span className="text-lg sm:text-xl lg:text-[1.75rem] text-[var(--color-text-subtle)]">|</span>
+              <span className="font-black text-lg sm:text-xl lg:text-[1.75rem]" style={{ color: "var(--color-chart-accent)" }}>
+                Dashboard
+              </span>
             </span>
           </div>
         </div>
@@ -538,8 +567,8 @@ export default function Dashboard() {
             the same panel opens as an overlay drawer (right below) instead
             of permanently taking 64-260px of a phone's width. */}
         <div
-          className="hidden lg:flex shrink-0 h-[calc(100dvh-73px)] sticky top-[73px] flex-col gap-3 transition-[width] duration-200"
-          style={{ width: sidebarOpen ? SIDEBAR_WIDTH : 64 }}
+          className="hidden lg:flex shrink-0 h-[calc(100dvh-4.5625rem)] sticky top-[4.5625rem] flex-col gap-3 transition-[width] duration-200"
+          style={{ width: sidebarOpen ? SIDEBAR_WIDTH : RAIL_WIDTH }}
         >
           <SavedTermsPanel
             variant="rail"

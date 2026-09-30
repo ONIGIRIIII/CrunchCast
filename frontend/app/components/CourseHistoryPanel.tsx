@@ -60,10 +60,10 @@ export default function CourseHistoryPanel({
     selectedTerm?.sections.find((s) => s.section === selectedSection) ?? null;
 
   // Its own container (stat grids below size off this panel's width, not
-  // the viewport), and capped so a 2560px monitor doesn't stretch the
-  // stats/chart/table across ~1800px.
+  // the viewport). Deliberately not width-capped: the grade chart, stat row
+  // and instructor table span the full course card at every screen size.
   return (
-    <div className="@container max-w-5xl">
+    <div className="@container">
           {loading && <p className="text-sm text-[var(--color-text-subtle)]">Loading...</p>}
           {error && <p className="text-sm text-severity-hard">{error}</p>}
           {terms && terms.length === 0 && (

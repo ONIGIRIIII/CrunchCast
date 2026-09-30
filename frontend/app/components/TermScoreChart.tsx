@@ -67,7 +67,7 @@ export default function TermScoreChart({ points, averageScore }: TermScoreChartP
           positioned by percentage against it. It fills the remaining space
           in its flex parent instead of a fixed pixel height, so the chart
           uses the full card rather than leaving empty space beneath it. */}
-      <div className="flex-1 min-h-[140px] flex gap-2">
+      <div className="flex-1 min-h-[8.75rem] flex gap-2">
       {/* Y-axis tick labels, sharing the same yFor percentages as the chart
           itself so they line up with the gridlines drawn inside the SVG. */}
       <div className="relative w-6 shrink-0">

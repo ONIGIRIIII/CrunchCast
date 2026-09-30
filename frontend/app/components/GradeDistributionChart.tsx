@@ -40,7 +40,7 @@ export default function GradeDistributionChart({
   return (
     <div ref={rootRef} className="@container mt-4">
       <p className="text-xs text-[var(--color-text-subtle)] mb-2">Grade distribution</p>
-      <div className="min-h-[140px] flex gap-2">
+      <div className="min-h-[8.75rem] flex gap-2">
         <div className="relative w-6 shrink-0">
           {ticks.map((t) => (
             <span

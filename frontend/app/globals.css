@@ -136,8 +136,9 @@ body {
 }
 
 /* Same, but never at lg+ - for the dashboard header, whose height there is
-   locked to the Saved Terms / Term Builder / Overview gridline (the 73px
-   offsets in Dashboard.tsx/TermResults.tsx), so a 44px button on a touch
+   locked to the Saved Terms / Term Builder / Overview gridline (the
+   4.5625rem - 73px at full scale - offsets in Dashboard.tsx/TermResults.tsx),
+   so a 44px button on a touch
    laptop would knock that row out of alignment. */
 @utility tap-target-until-lg {
   @media (max-width: 767.98px), (pointer: coarse) and (max-width: 1023.98px) {
@@ -182,18 +183,20 @@ body {
    names/selectors (`.landing`, `.faq-item`) and never applies to the
    dashboard, which stays on the shared tokens/utilities above. */
 
-/* Marketing pages (landing, privacy/terms, 404 - everything with a .landing
-   root) render at 90% scale on desktop: the root font size drops to 90%,
+/* The whole site renders at 90% scale on desktop - marketing pages (landing,
+   privacy/terms, 404 - a .landing root) and the dashboard (.app-dashboard
+   root, whose layout sizes are all rem too, including the header/sidebar
+   gridline rows): the root font size drops to 90%,
    and since nearly every size here is in rem (Tailwind spacing/type,
    container widths, the clamp() tokens' caps, the glows), the whole page
    comes out as it looks at 90% browser zoom. Done with font-size rather
    than CSS zoom/transform, both of which were tried earlier for page
    scaling and reverted for breaking on macOS Safari/Arc. Breakpoints are
    unaffected (media-query rem always uses the browser default). Kept off
-   below lg so phone/tablet text doesn't shrink, and off the dashboard,
-   whose header/sidebar gridline is locked to pixel heights (73px). */
+   below lg so phone/tablet text doesn't shrink. */
 @media (min-width: 64rem) {
-  :root:has(.landing) {
+  :root:has(.landing),
+  :root:has(.app-dashboard) {
     font-size: 90%;
   }
 }

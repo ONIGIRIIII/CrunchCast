@@ -77,7 +77,12 @@ export default function TermResults({
       {/* Single page-level grid: course selector top-left, spanning full
           height; everything else (overview row + detail panel) shares the
           same right-column width/position instead of using its own grid. */}
-      <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] items-start">
+      {/* lg+: Term Builder is --tb-w wide (set on the Dashboard root - 25%
+          of the space beside the collapsed rail, or 35% of the page
+          together with an open Saved Terms sidebar), Overview / Course
+          Description take the rest, and the split animates as the sidebar
+          opens/closes, in step with the header's title column. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[var(--tb-w)_1fr] lg:transition-[grid-template-columns] lg:duration-200 items-start">
         {/* Left: add-course search box plus the clickable course list -
             sticky so it stays pinned in view while the right side scrolls, at
             the same top offset as the "Saved Terms" sidebar (Dashboard's
@@ -85,11 +90,11 @@ export default function TermResults({
             top border - Dashboard's header border-b is this column's top
             edge at rest, one continuous gridline rather than two close
             parallel lines. */}
-        <div className="min-w-0 flex flex-col border-r border-b border-[var(--color-border)] lg:border-r-0 lg:sticky lg:top-[73px]">
-          <h2 className="flex items-center h-[69px] sm:h-[73px] px-4 border-b border-[var(--color-border)] text-panel lg:text-3xl font-black tracking-widest">
+        <div className="min-w-0 flex flex-col border-r border-b border-[var(--color-border)] lg:border-r-0 lg:sticky lg:top-[4.5625rem]">
+          <h2 className="flex items-center h-[4.3125rem] sm:h-[4.5625rem] px-4 border-b border-[var(--color-border)] text-panel lg:text-3xl font-black tracking-widest">
             Term Builder
           </h2>
-          <div className="h-[88px] flex flex-col justify-center px-4 border-b border-[var(--color-border)]">
+          <div className="h-[5.5rem] flex flex-col justify-center px-4 border-b border-[var(--color-border)]">
             <h3 className="font-bold text-lg">Add Course</h3>
             <p className="text-xs text-[var(--color-text-subtle)] mt-1">Search or type a course code to add it to this term.</p>
           </div>
@@ -183,7 +188,7 @@ export default function TermResults({
             both share this column's exact width and horizontal position.
             No top border, same reasoning as the left column above. */}
         <div className="@container min-w-0 flex flex-col border-[var(--color-border)] lg:border-l">
-          <div className="w-full flex items-center justify-between gap-3 h-[69px] sm:h-[73px] px-4 border-b border-r border-[var(--color-border)] text-panel lg:text-3xl font-black tracking-widest text-left">
+          <div className="w-full flex items-center justify-between gap-3 h-[4.3125rem] sm:h-[4.5625rem] px-4 border-b border-r border-[var(--color-border)] text-panel lg:text-3xl font-black tracking-widest text-left">
             <span>Overview</span>
             <div className="flex items-center gap-2 text-sm font-bold tracking-normal normal-case sm:mr-6">
               {weights != null ? (
@@ -191,7 +196,7 @@ export default function TermResults({
                   type="button"
                   onClick={onRemovePersonalization}
                   title="Remove personalization"
-                  className="tap-target flex items-center justify-center gap-1.5 h-8 px-3 xs:px-0 xs:w-[174px] border border-[var(--color-chart-accent)] bg-[var(--color-chart-accent)]/10 whitespace-nowrap text-[var(--color-chart-accent)] hover:border-severity-hard hover:text-severity-hard hover:bg-severity-hard/10 transition-colors"
+                  className="tap-target flex items-center justify-center gap-1.5 h-8 px-3 xs:px-0 xs:w-[10.875rem] border border-[var(--color-chart-accent)] bg-[var(--color-chart-accent)]/10 whitespace-nowrap text-[var(--color-chart-accent)] hover:border-severity-hard hover:text-severity-hard hover:bg-severity-hard/10 transition-colors"
                 >
                   Personalized
                   <span aria-hidden="true">&times;</span>
@@ -200,7 +205,7 @@ export default function TermResults({
                 <button
                   type="button"
                   onClick={onPersonalize}
-                  className="tap-target h-8 px-3 xs:px-0 xs:w-[174px] flex items-center justify-center whitespace-nowrap transition-colors border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)] hover:border-[var(--color-chart-accent)] hover:text-[var(--color-chart-accent)]"
+                  className="tap-target h-8 px-3 xs:px-0 xs:w-[10.875rem] flex items-center justify-center whitespace-nowrap transition-colors border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)] hover:border-[var(--color-chart-accent)] hover:text-[var(--color-chart-accent)]"
                 >
                   Personalize
                 </button>
@@ -208,7 +213,7 @@ export default function TermResults({
             </div>
           </div>
           {/* Column count follows this column's own width (container
-              query), not the viewport - at lg it sits beside the 420px Term
+              query), not the viewport - at lg it sits beside the 26.25rem Term
               Builder, so a 1024px screen only gives it ~540px. One column
               when narrow, then risk + signals side by side with the chart
               full-width underneath, then all three in a row. Gridlines come
@@ -303,7 +308,7 @@ export default function TermResults({
                 detail: e.detail,
               }));
               return (
-                <div key={courseKey} id={courseElId(c.subject, c.course)} className="@container scroll-mt-[calc(69px+1rem)] sm:scroll-mt-[calc(73px+1rem)]">
+                <div key={courseKey} id={courseElId(c.subject, c.course)} className="@container scroll-mt-[calc(4.3125rem+1rem)] sm:scroll-mt-[calc(4.5625rem+1rem)]">
                   <button
                     type="button"
                     onClick={() => toggleCourse(courseKey)}
@@ -339,7 +344,7 @@ export default function TermResults({
                     </svg>
                   </button>
                   {courseOpen && (
-                  <div className="grid grid-cols-1 @2xl:grid-cols-[200px_1fr] divide-y @2xl:divide-y-0 @2xl:divide-x divide-[var(--color-border)]">
+                  <div className="grid grid-cols-1 @2xl:grid-cols-[12.5rem_1fr] divide-y @2xl:divide-y-0 @2xl:divide-x divide-[var(--color-border)]">
                     <div className="p-5 sm:p-6">
                       <SignalGauges signals={courseSignals} />
                     </div>

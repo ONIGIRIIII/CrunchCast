@@ -17,7 +17,7 @@ export interface SignalValue {
  * full height of whatever column they share with taller sibling panels. */
 export default function SignalBars({ signals }: { signals: SignalValue[] }) {
   return (
-    <div className="flex flex-col gap-5 flex-1 justify-center min-h-[70px]">
+    <div className="flex flex-col gap-5 flex-1 justify-center min-h-[4.375rem]">
       {signals.map((s) => {
         const { barClass, textClass } = bandFor(s.value);
         const widthPct = Math.max(4, Math.min(100, s.value));
