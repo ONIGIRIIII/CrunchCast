@@ -10,11 +10,11 @@ export default function StatTile({
   value: string | number;
 }) {
   return (
-    <div className="px-4 py-3">
+    <div className="min-w-0 px-4 py-3">
       <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-subtle)] mb-1">
         {label}
       </p>
-      <p className="font-bold text-sm">{value}</p>
+      <p className="font-bold text-sm break-words">{value}</p>
     </div>
   );
 }

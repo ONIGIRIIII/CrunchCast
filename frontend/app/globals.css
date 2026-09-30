@@ -68,11 +68,72 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Responsive scale - one consistent breakpoint set (xs 480, then Tailwind's
+   own sm 640 / md 768 / lg 1024 / xl 1280 / 2xl 1536), plus fluid clamp()
+   tokens so type and spacing ease between breakpoints instead of jumping.
+   Deliberately plain clamp() rather than zoom/transform page scaling - both
+   of those were tried for the "cramped on laptops" problem and reverted for
+   breaking on macOS Safari/Arc. Each token tops out at the size the page was
+   originally tuned to on a large monitor, so 1536px+ looks unchanged - except
+   --spacing-section, deliberately roomier (96-192px) than the original 7rem. */
+@theme {
+  --breakpoint-xs: 30rem;
+
+  /* Landing hero wordmark: full-width column below lg, then half of a
+     two-column row at lg+ (so it needs its own, smaller ramp there to stay
+     inside that half instead of running into the 3D graph). */
+  --text-display: clamp(2.5rem, 0.5rem + 10vw, 6rem);
+  --text-display--line-height: 1;
+  --text-display-lg: clamp(4.5rem, 7vw, 6rem);
+  --text-display-lg--line-height: 1;
+  --text-tagline-lg: clamp(0.875rem, 1.3vw, 1.125rem);
+  --text-tagline-lg--line-height: 1.375;
+  --text-h2: clamp(1.5rem, 1.1rem + 1.2vw, 1.875rem);
+  --text-h2--line-height: 1.25;
+  --text-panel: clamp(1.25rem, 0.9rem + 1.6vw, 1.875rem);
+  --text-panel--line-height: 1.2;
+
+  --spacing-section: clamp(6rem, 3.27rem + 9.09vw, 12rem);
+  --spacing-gutter: clamp(1rem, 0.5rem + 2.5vw, 2.5rem);
+  --spacing-hero: clamp(3rem, 15.625vw - 7rem, 8rem);
+}
+
+/* Safety net only - every known overflow source is fixed at the component
+   level. `clip` rather than `hidden` so it doesn't create a scroll container
+   (which would break the dashboard's position: sticky columns). */
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
   line-height: 1.5;
+}
+
+/* 44x44 minimum hit area for small icon buttons, but only where it matters -
+   phone widths or any touch (coarse pointer) device - so desktop keeps the
+   compact terminal look. (Note: some utility class names live only in
+   lib/*.ts helpers, e.g. lib/chartTooltip.ts - Tailwind's source scan
+   covers lib/ too, so keep them as complete literal strings there.) */
+@utility tap-target {
+  @media (max-width: 767.98px), (pointer: coarse) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Same, but never at lg+ - for the dashboard header, whose height there is
+   locked to the Saved Terms / Term Builder / Overview gridline (the 73px
+   offsets in Dashboard.tsx/TermResults.tsx), so a 44px button on a touch
+   laptop would knock that row out of alignment. */
+@utility tap-target-until-lg {
+  @media (max-width: 767.98px), (pointer: coarse) and (max-width: 1023.98px) {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 
 /* Diagonal hatch texture for "unfilled" chart regions - dashboard reference's
@@ -88,24 +149,20 @@ body {
   );
 }
 
-/* Landing page course chips "materializing" out of the mesh burst behind
-   them - see MeshBackground.tsx's burst() and LandingPage.tsx's
-   addCourseIfNew, which fire together so the two effects read as one. */
-@keyframes chip-in {
+/* Dashboard's below-lg Saved Terms drawer sliding in from the left edge. */
+@keyframes drawer-in {
   from {
-    opacity: 0;
-    transform: scale(0.85) translateY(2px);
+    transform: translateX(-100%);
   }
   to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translateX(0);
   }
 }
-.chip-enter {
-  animation: chip-in 220ms ease-out;
+.drawer-enter {
+  animation: drawer-in 200ms ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
-  .chip-enter {
+  .drawer-enter {
     animation: none;
   }
 }
@@ -117,7 +174,7 @@ body {
 
 /* Same Geist Mono face as the dashboard (this just makes that explicit
    rather than relying on silent inheritance from `body`) - the landing
-   page keeps its own rounded cards/spacing/color language, but reads as
+   page keeps its own card/spacing/color language, but reads as
    the same product typographically instead of switching fonts. */
 .landing {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
@@ -132,8 +189,66 @@ body {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-/* Hero content fades/rises in on load - same easing family as chip-enter,
-   just slower and with a larger offset for a page-level entrance. */
+/* Orange accent glow across the top edge of a landing section - the hero's
+   original glow, shared so every section below it gets the same hue spilling
+   down from its top border. Drawn on ::before inside the section's own
+   stacking context (isolation), so it sits above the section's solid
+   background but behind its content. The hero runs it a little stronger
+   (--glow-strength) as the page's opening. --glow-offset pushes the glow's
+   center down from the top edge: far enough (past ~180px, where this
+   gradient fades out) and the glow no longer touches the edge at all, for a
+   section with no divider line above it to "emit" from. --glow-size (the
+   ellipse's width and height) stretches it over a taller block of content. */
+.landing-glow {
+  position: relative;
+  isolation: isolate;
+}
+.landing-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse var(--glow-size, 950px 260px) at 50% var(--glow-offset, 0px),
+    color-mix(in srgb, var(--color-chart-accent) var(--glow-strength, 16%), transparent),
+    transparent 70%
+  );
+}
+
+/* Divider between two landing sections, drawn at this section's bottom edge:
+   a 1px accent line (container width, max-w-6xl) that's strongest in the
+   middle and fades out toward both ends, sitting in the same glow as
+   everything else, spilling upward. Paired with the next section's own
+   top-edge glow spilling downward, the line ends up in the middle of one
+   continuous glow, lit from both sides - an orange line rather than the
+   grey --border, so it reads as part of the glow instead of cutting across
+   it. Fixed glow size/strength (not --glow-size/--glow-offset) so it always
+   mirrors the plain top-edge glow under the line. Needs .landing-glow on the
+   same element for the stacking context. */
+.landing-divider::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in srgb, var(--color-chart-accent) 55%, transparent) 50%,
+        transparent
+      )
+      bottom center / min(72rem, 100%) 1px no-repeat,
+    radial-gradient(
+      ellipse 950px 260px at 50% 100%,
+      color-mix(in srgb, var(--color-chart-accent) var(--glow-strength, 16%), transparent),
+      transparent 70%
+    );
+}
+
+/* Hero content fades/rises in on load - a slow ease-out with a small
+   upward offset for a page-level entrance. */
 @keyframes landing-rise-in {
   from {
     opacity: 0;
@@ -184,6 +299,29 @@ body {
      exist as scroll filler, so drop it from view too. */
   .landing-marquee-track > :nth-child(2) {
     display: none;
+  }
+}
+
+/* "How it works" grading-spread card (SignalCards.tsx's SpreadVisual): once
+   the wide curve has spread out, it keeps gently widening/narrowing so the
+   card reads as "spread" rather than a static chart. Origin is the curve's
+   own center-baseline in SVG user units. */
+@keyframes signal-breathe {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.86);
+  }
+}
+.signal-breathe {
+  transform-origin: 120px 92px;
+  animation: signal-breathe 5s ease-in-out 1.5s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .signal-breathe {
+    animation: none;
   }
 }
 

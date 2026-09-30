@@ -51,15 +51,15 @@ export default function NewTermModal({ open, onClose, onCreate, loading, error }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-10 px-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-6 sm:py-10 px-4">
       <div className="absolute inset-0 bg-black/40" onClick={close} />
-      <div className="relative w-full max-w-lg bg-[var(--color-surface-raised)] border border-[var(--color-border-strong)] p-6">
+      <div className="relative w-full max-w-lg bg-[var(--color-surface-raised)] border border-[var(--color-border-strong)] p-5 sm:p-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-bold">New term</h2>
           <button
             onClick={close}
             aria-label="Close"
-            className="w-6 h-6 flex items-center justify-center text-sm text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)]"
+            className="tap-target w-6 h-6 max-md:-mr-2 flex items-center justify-center text-sm text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)]"
           >
             ×
           </button>
@@ -78,7 +78,7 @@ export default function NewTermModal({ open, onClose, onCreate, loading, error }
                 type="button"
                 onClick={() => removeCourse(index)}
                 aria-label={`Remove ${c.subject} ${c.course}`}
-                className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[var(--color-foreground)] hover:border-severity-hard hover:text-severity-hard transition-colors"
+                className="tap-target flex items-center gap-1.5 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[var(--color-foreground)] hover:border-severity-hard hover:text-severity-hard transition-colors"
               >
                 {c.subject} {c.course}
                 <span aria-hidden="true">&times;</span>
@@ -94,13 +94,13 @@ export default function NewTermModal({ open, onClose, onCreate, loading, error }
         )}
 
         <div className="flex items-center justify-end gap-3 mt-5">
-          <button onClick={close} className="text-xs text-[var(--color-text-subtle)] hover:text-[var(--color-foreground)]">
+          <button onClick={close} className="tap-target px-2 text-xs text-[var(--color-text-subtle)] hover:text-[var(--color-foreground)]">
             Cancel
           </button>
           <button
             onClick={predict}
             disabled={courses.length === 0 || loading}
-            className="bg-[var(--color-chart-accent)] text-white px-4 py-2 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
+            className="tap-target bg-[var(--color-chart-accent)] text-white px-4 py-2 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
           >
             {loading ? "Predicting..." : "Predict"}
           </button>

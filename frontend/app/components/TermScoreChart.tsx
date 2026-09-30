@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { labelAlignClass, tooltipAlignClass, useDismissTooltipOnOutsidePointer } from "@/lib/chartTooltip";
 
 export interface ScorePoint {
   subject: string;
@@ -25,6 +26,8 @@ interface TermScoreChartProps {
  * per-course scores instead of a time series we don't have. */
 export default function TermScoreChart({ points, averageScore }: TermScoreChartProps) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useDismissTooltipOnOutsidePointer(rootRef, hovered, setHovered);
 
   if (points.length < 2) {
     return (
@@ -58,7 +61,7 @@ export default function TermScoreChart({ points, averageScore }: TermScoreChartP
   const areaPath = `${linePath} L ${xFor(n - 1)} ${HEIGHT} L ${xFor(0)} ${HEIGHT} Z`;
 
   return (
-    <div className="flex flex-col h-full">
+    <div ref={rootRef} className="@container flex flex-col h-full">
       {/* This wrapper's height must be exactly the SVG's rendered height -
           nothing else can live inside it - since the dots/tooltip below are
           positioned by percentage against it. It fills the remaining space
@@ -125,23 +128,30 @@ export default function TermScoreChart({ points, averageScore }: TermScoreChartP
       {/* Dots are plain HTML circles positioned by percentage, not SVG
           <circle> elements - the chart's viewBox is stretched non-uniformly
           (preserveAspectRatio="none") to fill the responsive width, which
-          would otherwise squash every <circle> into an ellipse. */}
+          would otherwise squash every <circle> into an ellipse. Buttons, not
+          divs, so the tooltip also opens on tap and keyboard focus instead
+          of only on mouse hover. */}
       {points.map((p, i) => (
-        <div
+        <button
+          type="button"
           key={`${p.subject}-${p.course}`}
-          className="absolute -translate-x-1/2 -translate-y-1/2 p-2 cursor-pointer"
+          aria-label={`${p.subject} ${p.course}: ${p.score.toFixed(0)} out of 100`}
+          className="tap-target absolute -translate-x-1/2 -translate-y-1/2 p-2 flex items-center justify-center cursor-pointer"
           style={{ left: `${(xFor(i) / WIDTH) * 100}%`, top: `${(yFor(p.score) / HEIGHT) * 100}%` }}
           onMouseEnter={() => setHovered(i)}
           onMouseLeave={() => setHovered((h) => (h === i ? null : h))}
+          onFocus={() => setHovered(i)}
+          onBlur={() => setHovered((h) => (h === i ? null : h))}
+          onClick={() => setHovered(i)}
         >
           <span
             className={`block bg-[var(--color-chart-accent)] transition-transform ${hovered === i ? "w-3 h-3" : "w-2 h-2"}`}
           />
-        </div>
+        </button>
       ))}
       {hovered != null && (
         <div
-          className="absolute -translate-x-1/2 -translate-y-[calc(100%+10px)] bg-[var(--color-surface-raised)] border border-[var(--color-border-strong)] text-[var(--color-foreground)] text-xs px-3 py-2 whitespace-nowrap pointer-events-none"
+          className={`absolute ${tooltipAlignClass((xFor(hovered) / WIDTH) * 100)} -translate-y-[calc(100%+10px)] bg-[var(--color-surface-raised)] border border-[var(--color-border-strong)] text-[var(--color-foreground)] text-xs px-3 py-2 whitespace-nowrap pointer-events-none z-10`}
           style={{
             left: `${(xFor(hovered) / WIDTH) * 100}%`,
             top: `${(yFor(points[hovered].score) / HEIGHT) * 100}%`,
@@ -155,9 +165,19 @@ export default function TermScoreChart({ points, averageScore }: TermScoreChartP
       )}
       </div>
       </div>
-      <div className="flex justify-between mt-2 px-1 pl-8">
-        {points.map((p) => (
-          <span key={`${p.subject}-${p.course}-label`} className="text-[10px] text-[var(--color-text-subtle)]">
+      {/* Each label sits directly under its own point (ml-8 = the y-axis
+          column + gap above). With many courses in a narrow chart every
+          other label drops out rather than overlapping - the dots' own
+          tooltips still name every one. */}
+      <div className="relative h-4 mt-2 ml-8">
+        {points.map((p, i) => (
+          <span
+            key={`${p.subject}-${p.course}-label`}
+            className={`absolute top-0 whitespace-nowrap text-[10px] text-[var(--color-text-subtle)] ${labelAlignClass(i, n)} ${
+              i % 2 === 1 ? (n > 8 ? "hidden @xl:inline" : n > 5 ? "hidden @md:inline" : n > 4 ? "hidden @xs:inline" : "") : ""
+            }`}
+            style={{ left: `${(xFor(i) / WIDTH) * 100}%` }}
+          >
             {p.subject} {p.course}
           </span>
         ))}

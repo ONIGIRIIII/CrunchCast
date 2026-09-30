@@ -59,8 +59,11 @@ export default function CourseHistoryPanel({
   const selectedSectionStats: SectionStats | null =
     selectedTerm?.sections.find((s) => s.section === selectedSection) ?? null;
 
+  // Its own container (stat grids below size off this panel's width, not
+  // the viewport), and capped so a 2560px monitor doesn't stretch the
+  // stats/chart/table across ~1800px.
   return (
-    <div>
+    <div className="@container max-w-5xl">
           {loading && <p className="text-sm text-[var(--color-text-subtle)]">Loading...</p>}
           {error && <p className="text-sm text-severity-hard">{error}</p>}
           {terms && terms.length === 0 && (
@@ -75,7 +78,7 @@ export default function CourseHistoryPanel({
                   <select
                     value={selectedTermKey ?? ""}
                     onChange={(e) => selectTerm(e.target.value)}
-                    className="border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-[var(--color-foreground)] px-2.5 py-1.5 text-xs focus:outline focus:outline-2 focus:outline-accent focus:-outline-offset-1"
+                    className="tap-target border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-[var(--color-foreground)] px-2.5 py-1.5 text-xs focus:outline focus:outline-2 focus:outline-accent focus:-outline-offset-1"
                   >
                     {terms.map((t) => (
                       <option
@@ -95,7 +98,7 @@ export default function CourseHistoryPanel({
                     <select
                       value={selectedSection}
                       onChange={(e) => setSelectedSection(e.target.value)}
-                      className="border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-[var(--color-foreground)] px-2.5 py-1.5 text-xs focus:outline focus:outline-2 focus:outline-accent focus:-outline-offset-1"
+                      className="tap-target border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-[var(--color-foreground)] px-2.5 py-1.5 text-xs focus:outline focus:outline-2 focus:outline-accent focus:-outline-offset-1"
                     >
                       <option value={OVERALL} className="bg-[var(--color-surface-raised)] text-[var(--color-foreground)]">
                         Overall
@@ -123,7 +126,7 @@ export default function CourseHistoryPanel({
               {/* Overall: the term's blended stats + a comparison of that term's actual instructors */}
               {selectedTerm && selectedTerm.available && selectedSection === OVERALL && (
                 <>
-                  <div className="mt-4 grid grid-cols-3 sm:grid-cols-6 divide-x divide-y divide-[var(--color-border)]">
+                  <div className="mt-4 grid grid-cols-3 @xl:grid-cols-6 divide-x divide-y divide-[var(--color-border)]">
                     <StatTile label="Average" value={`${selectedTerm.avg}%`} />
                     <StatTile label="Std dev" value={selectedTerm.std_dev ?? "-"} />
                     <StatTile label="High" value={selectedTerm.high ?? "-"} />
@@ -150,6 +153,10 @@ export default function CourseHistoryPanel({
                         Instructors this term
                         {selectedTerm.best_instructor && " - compared against each other below"}
                       </p>
+                      {/* Std dev (often "-" for recent terms) drops out on a
+                          narrow panel so the table usually fits without its
+                          own sideways scroll; overflow-x-auto stays as the
+                          fallback for long instructor names. */}
                       <div className="overflow-x-auto border border-[var(--color-border)]">
                         <table className="w-full text-xs">
                           <thead>
@@ -158,7 +165,7 @@ export default function CourseHistoryPanel({
                               <th className="font-normal pr-3 py-2">Sections</th>
                               <th className="font-normal pr-3 py-2">Avg</th>
                               <th className="font-normal pr-3 py-2">Fail rate</th>
-                              <th className="font-normal pr-3 py-2">Std dev</th>
+                              <th className="hidden @md:table-cell font-normal pr-3 py-2">Std dev</th>
                               <th className="font-normal pr-3 py-2">Enrolled</th>
                             </tr>
                           </thead>
@@ -179,7 +186,7 @@ export default function CourseHistoryPanel({
                                 <td className="pr-3 py-2">{s.sections.join(", ")}</td>
                                 <td className="pr-3 py-2">{s.avg}%</td>
                                 <td className="pr-3 py-2">{s.fail_rate}%</td>
-                                <td className="pr-3 py-2">{s.std_dev != null ? s.std_dev : "-"}</td>
+                                <td className="hidden @md:table-cell pr-3 py-2">{s.std_dev != null ? s.std_dev : "-"}</td>
                                 <td className="pr-3 py-2">{s.enrolled}</td>
                               </tr>
                             ))}
@@ -199,7 +206,7 @@ export default function CourseHistoryPanel({
 
               {/* A specific section: that section's own numbers, plus who taught it - no comparison/best-pick marking */}
               {selectedSectionStats && (
-                <div className="mt-4 grid grid-cols-3 sm:grid-cols-5 divide-x divide-y divide-[var(--color-border)]">
+                <div className="mt-4 grid grid-cols-3 @xl:grid-cols-5 divide-x divide-y divide-[var(--color-border)]">
                   <StatTile label="Average" value={`${selectedSectionStats.avg}%`} />
                   <StatTile label="Std dev" value={selectedSectionStats.std_dev ?? "-"} />
                   <StatTile label="Fail rate" value={`${selectedSectionStats.fail_rate}%`} />
@@ -210,7 +217,7 @@ export default function CourseHistoryPanel({
                       border-b on the grid itself, which would double up
                       with the divide-y border already under every other
                       cell. */}
-                  <div className="col-span-3 sm:col-span-1 border-b border-[var(--color-border)]">
+                  <div className="col-span-3 @xl:col-span-1 border-b border-[var(--color-border)]">
                     <StatTile
                       label={`Instructor${selectedSectionStats.instructors.length !== 1 ? "s" : ""}`}
                       value={

@@ -49,15 +49,15 @@ export default function PersonalizationQuiz({ open, onClose, onComplete }: Props
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-10 px-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-6 sm:py-10 px-4">
       <div className="absolute inset-0 bg-black/40" onClick={close} />
-      <div className="relative w-full max-w-xl bg-[var(--color-surface-raised)] border border-[var(--color-border-strong)] p-7 sm:p-8">
-        <div className="flex items-center justify-between mb-2">
+      <div className="relative w-full max-w-xl bg-[var(--color-surface-raised)] border border-[var(--color-border-strong)] p-5 sm:p-8">
+        <div className="flex items-start justify-between gap-3 mb-2">
           <h2 className="text-lg font-bold">What does &quot;crunch&quot; mean to you?</h2>
           <button
             onClick={close}
             aria-label="Close quiz"
-            className="w-7 h-7 flex items-center justify-center text-sm text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)]"
+            className="tap-target w-7 h-7 max-md:-mr-2 shrink-0 flex items-center justify-center text-sm text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)]"
           >
             ×
           </button>
@@ -82,7 +82,7 @@ export default function PersonalizationQuiz({ open, onClose, onComplete }: Props
 
         <div key={question.id}>
           <p className="text-base mb-4">{question.text}</p>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 sm:gap-2">
             {LIKERT_LABELS.map((label, value0) => {
               const value = value0 + 1;
               const selected = answers[question.id] === value;
@@ -91,7 +91,7 @@ export default function PersonalizationQuiz({ open, onClose, onComplete }: Props
                   key={value}
                   title={label}
                   onClick={() => setAnswers((prev) => ({ ...prev, [question.id]: value }))}
-                  className={`flex-1 border py-2.5 text-xs font-bold transition-colors ${
+                  className={`flex-1 min-w-0 max-md:min-h-11 border py-2.5 text-xs font-bold transition-colors ${
                     selected
                       ? "bg-[var(--color-chart-accent)] border-[var(--color-chart-accent)] text-white"
                       : "border-[var(--color-border-strong)] hover:bg-[var(--color-hover-surface)]"
@@ -110,13 +110,13 @@ export default function PersonalizationQuiz({ open, onClose, onComplete }: Props
 
         <div className="flex items-center justify-between mt-7">
           {step === 0 ? (
-            <button onClick={close} className="text-xs text-[var(--color-text-subtle)] hover:text-[var(--color-foreground)]">
+            <button onClick={close} className="tap-target -ml-2 px-2 text-xs text-[var(--color-text-subtle)] hover:text-[var(--color-foreground)]">
               Skip for now
             </button>
           ) : (
             <button
               onClick={() => setStep((s) => Math.max(0, s - 1))}
-              className="text-xs text-[var(--color-text-subtle)] hover:text-[var(--color-foreground)]"
+              className="tap-target -ml-2 px-2 text-xs text-[var(--color-text-subtle)] hover:text-[var(--color-foreground)]"
             >
               ← Back
             </button>
@@ -124,7 +124,7 @@ export default function PersonalizationQuiz({ open, onClose, onComplete }: Props
           <button
             onClick={next}
             disabled={!answered}
-            className="bg-[var(--color-chart-accent)] text-white px-5 py-2.5 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
+            className="tap-target bg-[var(--color-chart-accent)] text-white px-5 py-2.5 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
           >
             {isLast ? "See my crunch weights" : "Next"}
           </button>

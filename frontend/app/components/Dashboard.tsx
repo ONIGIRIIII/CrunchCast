@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError, predictTerm, type CourseInput, type PredictResponse, type Session, type Weights } from "@/lib/api";
@@ -21,6 +21,9 @@ import NewTermModal from "./NewTermModal";
 import DifficultyBadge from "./DifficultyBadge";
 
 const SIDEBAR_WIDTH = 260;
+// Matches Tailwind's `lg` breakpoint - the width at which the inline Saved
+// Terms rail replaces the mobile drawer.
+const DESKTOP_QUERY = "(min-width: 1024px)";
 
 function EmptyResults() {
   return (
@@ -42,6 +45,168 @@ function PredictingPlaceholder() {
   );
 }
 
+interface SavedTermsPanelProps {
+  /** "rail" is the lg+ inline sidebar (collapsible to a 64px icon column);
+   * "drawer" is the below-lg overlay, always expanded, whose header button
+   * closes it instead of collapsing it. */
+  variant: "rail" | "drawer";
+  expanded: boolean;
+  onToggle: () => void;
+  collections: SavedCollection[];
+  activeCollectionId: string | null;
+  onNewTerm: () => void;
+  onLoad: (collection: SavedCollection) => void;
+  onDelete: (id: string) => void;
+}
+
+function SavedTermsPanel({
+  variant,
+  expanded,
+  onToggle,
+  collections,
+  activeCollectionId,
+  onNewTerm,
+  onLoad,
+  onDelete,
+}: SavedTermsPanelProps) {
+  const toggleLabel = variant === "drawer" ? "Close Saved Terms" : expanded ? "Collapse sidebar" : "Expand sidebar";
+  return (
+    // No top border - the header's own border-b above is this card's top
+    // edge, so the two read as one continuous gridline instead of two
+    // parallel lines a few px apart.
+    <aside
+      className="flex-1 min-h-0 border-x border-b border-[var(--color-border)] backdrop-blur-xl backdrop-saturate-150 flex flex-col overflow-hidden"
+      style={{
+        background: "var(--glass-tint)",
+        boxShadow: "inset 1px 0 0 var(--glass-highlight), 0 8px 30px rgba(0,0,0,0.35)",
+      }}
+    >
+      <div
+        className={`flex items-center h-[69px] sm:h-[73px] px-4 border-b border-[var(--color-border)] shrink-0 ${
+          expanded ? "justify-between" : "justify-center"
+        }`}
+      >
+        {expanded && (
+          <div className="min-w-0">
+            <h3 className="font-bold text-lg truncate">
+              Saved Terms{collections.length > 0 && ` [${collections.length}]`}
+            </h3>
+            <p className="text-xs text-[var(--color-text-subtle)] mt-1 truncate">
+              {variant === "drawer" ? "Tap to load the term." : "Click to load the term."}
+            </p>
+          </div>
+        )}
+        <button
+          onClick={onToggle}
+          aria-label={toggleLabel}
+          title={toggleLabel}
+          className="tap-target w-8 h-8 border border-[var(--color-border-strong)] flex items-center justify-center text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)] hover:border-[var(--color-chart-accent)] hover:text-[var(--color-chart-accent)] transition-colors shrink-0"
+        >
+          {variant === "drawer" ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+              <line x1="6" y1="2.5" x2="6" y2="13.5" stroke="currentColor" strokeWidth="1.3" />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      <div className="h-[88px] flex items-center px-4 border-b border-[var(--color-border)] shrink-0">
+        <button
+          onClick={onNewTerm}
+          title="New Term"
+          aria-label="New Term"
+          className={`tap-target w-full flex items-center gap-2 border border-[var(--color-border-strong)] bg-transparent hover:bg-[var(--color-hover-surface)] hover:border-[var(--color-chart-accent)] hover:text-[var(--color-chart-accent)] transition-colors text-sm font-bold py-2 ${
+            expanded ? "justify-start px-4" : "justify-center px-0"
+          }`}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="shrink-0">
+            <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          {expanded && <span className="whitespace-nowrap">New Term</span>}
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="flex-1 overflow-y-auto pb-2 min-h-0">
+          {collections.length === 0 ? (
+            <p className="text-xs text-[var(--color-text-subtle)] p-4">
+              No saved terms yet. Predict a term, then hit &quot;Save this term&quot; to keep it here.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 -space-y-px -mt-px">
+              {collections.map((c) => {
+                const active = c.id === activeCollectionId;
+                return (
+                  <div
+                    key={c.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onLoad(c)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") onLoad(c);
+                    }}
+                    className={`text-left p-4 border-t border-b border-[var(--color-border)] transition-colors cursor-pointer ${
+                      active ? "bg-[var(--color-hover-surface)]" : "hover:bg-[var(--color-hover-surface)]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm truncate">{c.name}</p>
+                        <p className="text-xs text-[var(--color-text-subtle)] truncate mt-0.5">
+                          {c.score != null ? <DifficultyBadge score={c.score} /> : "Scoring…"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(c.id);
+                          }}
+                          aria-label={`Delete ${c.name}`}
+                          title={`Delete ${c.name}`}
+                          className="tap-target w-7 h-7 border border-[var(--color-border-strong)] text-[var(--color-text-subtle)] flex items-center justify-center hover:bg-[var(--color-hover-surface)] hover:border-severity-hard hover:text-severity-hard transition-colors"
+                        >
+                          ×
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onLoad(c);
+                          }}
+                          aria-label={`Load ${c.name}`}
+                          title={`Load ${c.name}`}
+                          className="tap-target w-7 h-7 border border-[var(--color-border-strong)] text-[var(--color-text-subtle)] flex items-center justify-center hover:border-accent hover:text-accent transition-colors"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path
+                              d="M3 8h10M9 4l4 4-4 4"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </aside>
+  );
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const [courses, setCourses] = useState<CourseInput[]>([]);
@@ -56,6 +221,10 @@ export default function Dashboard() {
   const [newTermModalOpen, setNewTermModalOpen] = useState(false);
   const [theme, setTheme] = useState<Theme>("dark");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Below lg there's no room for the inline sidebar rail, so Saved Terms
+  // opens as an off-canvas drawer instead - separate state from
+  // `sidebarOpen`, which only ever drives the lg+ rail's expanded width.
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const backfillingScores = useRef<Set<string>>(new Set());
 
@@ -117,10 +286,37 @@ export default function Dashboard() {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (!drawerOpen) return;
+    // Lock page scroll behind the drawer, close on Escape, and close if the
+    // viewport grows past lg (where the inline rail takes over instead).
+    const desktop = window.matchMedia(DESKTOP_QUERY);
+    const onChange = () => {
+      if (desktop.matches) setDrawerOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDrawerOpen(false);
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    desktop.addEventListener("change", onChange);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      desktop.removeEventListener("change", onChange);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [drawerOpen]);
+
   function toggleTheme() {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
     saveTheme(next);
+  }
+
+  function openSavedTerms() {
+    if (window.matchMedia(DESKTOP_QUERY).matches) setSidebarOpen(true);
+    else setDrawerOpen(true);
   }
 
   const addedKeys = useMemo(
@@ -151,6 +347,7 @@ export default function Dashboard() {
   }
 
   function handleNewTerm() {
+    setDrawerOpen(false);
     setNewTermModalOpen(true);
   }
 
@@ -189,6 +386,7 @@ export default function Dashboard() {
   }
 
   function handlePredictCollection(collection: SavedCollection) {
+    setDrawerOpen(false);
     setCourses(collection.courses);
     setActiveCollectionId(collection.id);
     handlePredict(collection.courses);
@@ -207,8 +405,13 @@ export default function Dashboard() {
     <div className="min-h-screen flex flex-col">
       {/* Top nav bar - just logo/name now. Saved Term/Personalize/theme
           toggle live in TermResults' own "Overview" title row instead. */}
+      {/* Below md the header's py-3 + 44px touch-size buttons keep it at
+          about the same height as md+'s py-4 + 32px buttons. The buttons
+          use tap-target-until-lg (not tap-target) so a touch device at lg+
+          never grows this row past the 73px the sidebar/Term Builder
+          gridline offsets assume. */}
       <header
-        className="sticky top-0 z-30 flex items-center gap-4 py-4 border-x border-b border-[var(--color-border)] backdrop-blur-xl backdrop-saturate-150 shrink-0"
+        className="sticky top-0 z-30 flex items-center gap-2 sm:gap-4 py-3 md:py-4 border-x border-b border-[var(--color-border)] backdrop-blur-xl backdrop-saturate-150 shrink-0"
         style={{
           background: "var(--glass-tint)",
           boxShadow: "inset 0 1px 0 var(--glass-highlight), 0 8px 30px rgba(0,0,0,0.35)",
@@ -234,11 +437,15 @@ export default function Dashboard() {
               (full navbar height), not just this row's content height.
               Width tracks the sidebar's own current width (64 collapsed /
               SIDEBAR_WIDTH open) instead of a fixed 64, so the divider
-              still lines up with the sidebar's right edge in both states. */}
+              still lines up with the sidebar's right edge in both states.
+              That tracking only applies at lg+, where the rail exists -
+              below lg it's a plain 64px cell (the drawer overlays the page
+              instead of pushing it). */}
           <Link
             href="/"
-            className="shrink-0 self-stretch -my-4 flex items-center justify-center border-r border-[var(--color-border)] transition-[width] duration-200 hover:opacity-85"
-            style={{ width: sidebarOpen ? SIDEBAR_WIDTH : 64 }}
+            aria-label="CrunchCast home"
+            className="shrink-0 self-stretch -my-3 md:-my-4 w-16 lg:w-[var(--rail-w)] flex items-center justify-center border-r border-[var(--color-border)] transition-[width] duration-200 hover:opacity-85"
+            style={{ "--rail-w": `${sidebarOpen ? SIDEBAR_WIDTH : 64}px` } as CSSProperties}
           >
             <svg width="30" height="30" viewBox="-2 0 24 24" fill="none" aria-hidden="true">
               <path
@@ -263,29 +470,44 @@ export default function Dashboard() {
               divider below; text sized up so it actually fills the column
               instead of sitting small in a lot of empty space. */}
           <div className="flex items-center justify-start gap-2 px-3 lg:w-[420px]">
-            <Link href="/" className="font-black text-lg sm:text-xl lg:text-[28px] hover:opacity-85 transition-opacity">
+            <Link href="/" className="tap-target-until-lg inline-flex items-center font-black text-lg sm:text-xl lg:text-[28px] hover:opacity-85 transition-opacity">
               Crunch<span style={{ color: "var(--color-chart-accent)" }}>Cast</span>
             </Link>
-            <span className="text-lg sm:text-xl lg:text-[28px] text-[var(--color-text-subtle)]">|</span>
-            <span className="font-black text-lg sm:text-xl lg:text-[28px]" style={{ color: "var(--color-chart-accent)" }}>
+            {/* "| Dashboard" drops below xs - there isn't room for it next
+                to the menu/theme buttons on a phone. */}
+            <span className="hidden xs:inline text-lg sm:text-xl lg:text-[28px] text-[var(--color-text-subtle)]">|</span>
+            <span className="hidden xs:inline font-black text-lg sm:text-xl lg:text-[28px]" style={{ color: "var(--color-chart-accent)" }}>
               Dashboard
             </span>
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-end gap-3 pr-4 sm:pr-6 lg:pr-10">
+        <div className="flex-1 flex items-center justify-end gap-2 sm:gap-3 pr-3 sm:pr-6 lg:pr-10">
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={openSavedTerms}
             title="Open Saved Terms"
-            className="h-8 px-4 flex items-center text-base font-bold whitespace-nowrap transition-colors border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)] hover:border-[var(--color-chart-accent)] hover:text-[var(--color-chart-accent)]"
+            className="hidden sm:flex tap-target-until-lg h-8 px-4 items-center text-base font-bold whitespace-nowrap transition-colors border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)] hover:border-[var(--color-chart-accent)] hover:text-[var(--color-chart-accent)]"
           >
             Saved Term
+          </button>
+          {/* Phone-width stand-in for the "Saved Term" text button above -
+              the hamburger that opens the Saved Terms drawer. */}
+          <button
+            onClick={openSavedTerms}
+            aria-label="Open Saved Terms"
+            aria-expanded={drawerOpen}
+            aria-controls="saved-terms-drawer"
+            className="sm:hidden tap-target-until-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] w-8 h-8 flex items-center justify-center text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)] hover:border-[var(--color-chart-accent)] hover:text-[var(--color-chart-accent)] transition-colors shrink-0"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
           </button>
           <button
             onClick={toggleTheme}
             aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            className="border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] w-8 h-8 flex items-center justify-center hover:bg-[var(--color-hover-surface)] hover:border-[var(--color-chart-accent)] hover:text-[var(--color-chart-accent)] transition-colors shrink-0"
+            className="tap-target-until-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] w-8 h-8 flex items-center justify-center hover:bg-[var(--color-hover-surface)] hover:border-[var(--color-chart-accent)] hover:text-[var(--color-chart-accent)] transition-colors shrink-0"
           >
             {theme === "dark" ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -312,140 +534,48 @@ export default function Dashboard() {
       </header>
 
       <div className="flex flex-1 min-h-0">
-        {/* Left column: the "Saved terms" nav bar - fixed width, no longer
-            collapsible (Personalize/theme took over the toggle's spot in
-            its header row above). */}
+        {/* Left column: the "Saved terms" nav rail - lg+ only. Below lg
+            the same panel opens as an overlay drawer (right below) instead
+            of permanently taking 64-260px of a phone's width. */}
         <div
-          className="shrink-0 h-[calc(100vh-69px)] sm:h-[calc(100vh-73px)] sticky top-[69px] sm:top-[73px] flex flex-col gap-3 transition-[width] duration-200"
+          className="hidden lg:flex shrink-0 h-[calc(100dvh-73px)] sticky top-[73px] flex-col gap-3 transition-[width] duration-200"
           style={{ width: sidebarOpen ? SIDEBAR_WIDTH : 64 }}
         >
-          {/* No top border - the header's own border-b above is this card's
-              top edge, so the two read as one continuous gridline instead
-              of two parallel lines a few px apart. */}
-          <aside
-            className="flex-1 min-h-0 border-x border-b border-[var(--color-border)] backdrop-blur-xl backdrop-saturate-150 flex flex-col overflow-hidden"
-            style={{
-              background: "var(--glass-tint)",
-              boxShadow: "inset 1px 0 0 var(--glass-highlight), 0 8px 30px rgba(0,0,0,0.35)",
-            }}
-          >
-          <div
-            className={`flex items-center h-[69px] sm:h-[73px] px-4 border-b border-[var(--color-border)] shrink-0 ${
-              sidebarOpen ? "justify-between" : "justify-center"
-            }`}
-          >
-            {sidebarOpen && (
-              <div className="min-w-0">
-                <h3 className="font-bold text-lg truncate">
-                  Saved Terms{collections.length > 0 && ` [${collections.length}]`}
-                </h3>
-                <p className="text-xs text-[var(--color-text-subtle)] mt-1 truncate">
-                  Click to load the term.
-                </p>
-              </div>
-            )}
-            <button
-              onClick={() => setSidebarOpen((v) => !v)}
-              aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-              className="w-8 h-8 border border-[var(--color-border-strong)] flex items-center justify-center text-[var(--color-text-subtle)] hover:bg-[var(--color-hover-surface)] hover:border-[var(--color-chart-accent)] hover:text-[var(--color-chart-accent)] transition-colors shrink-0"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
-                <line x1="6" y1="2.5" x2="6" y2="13.5" stroke="currentColor" strokeWidth="1.3" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="h-[88px] flex items-center px-4 border-b border-[var(--color-border)] shrink-0">
-          <button
-            onClick={handleNewTerm}
-            title="New Term"
-            className={`w-full flex items-center gap-2 border border-[var(--color-border-strong)] bg-transparent hover:bg-[var(--color-hover-surface)] hover:border-[var(--color-chart-accent)] hover:text-[var(--color-chart-accent)] transition-colors text-sm font-bold py-2 ${
-              sidebarOpen ? "justify-start px-4" : "justify-center px-0"
-            }`}
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="shrink-0">
-              <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            {sidebarOpen && <span className="whitespace-nowrap">New Term</span>}
-          </button>
+          <SavedTermsPanel
+            variant="rail"
+            expanded={sidebarOpen}
+            onToggle={() => setSidebarOpen((v) => !v)}
+            collections={collections}
+            activeCollectionId={activeCollectionId}
+            onNewTerm={handleNewTerm}
+            onLoad={handlePredictCollection}
+            onDelete={handleDeleteCollection}
+          />
         </div>
 
-          {sidebarOpen && (
-          <div className="flex-1 overflow-y-auto pb-2 min-h-0">
-            {collections.length === 0 ? (
-              <p className="text-xs text-[var(--color-text-subtle)] p-4">
-                No saved terms yet. Predict a term, then hit &quot;Save this term&quot; to keep it here.
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 -space-y-px -mt-px">
-                {collections.map((c) => {
-                  const active = c.id === activeCollectionId;
-                  return (
-                    <div
-                      key={c.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handlePredictCollection(c)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") handlePredictCollection(c);
-                      }}
-                      className={`text-left p-4 border-t border-b border-[var(--color-border)] transition-colors cursor-pointer ${
-                        active ? "bg-[var(--color-hover-surface)]" : "hover:bg-[var(--color-hover-surface)]"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-bold text-sm truncate">{c.name}</p>
-                          <p className="text-xs text-[var(--color-text-subtle)] truncate mt-0.5">
-                            {c.score != null ? <DifficultyBadge score={c.score} /> : "Scoring…"}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCollection(c.id);
-                            }}
-                            aria-label={`Delete ${c.name}`}
-                            title={`Delete ${c.name}`}
-                            className="w-7 h-7 border border-[var(--color-border-strong)] text-[var(--color-text-subtle)] flex items-center justify-center hover:bg-[var(--color-hover-surface)] hover:border-severity-hard hover:text-severity-hard transition-colors"
-                          >
-                            ×
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handlePredictCollection(c);
-                            }}
-                            aria-label={`Load ${c.name}`}
-                            title={`Load ${c.name}`}
-                            className="w-7 h-7 border border-[var(--color-border-strong)] text-[var(--color-text-subtle)] flex items-center justify-center hover:border-accent hover:text-accent transition-colors"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                              <path
-                                d="M3 8h10M9 4l4 4-4 4"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+        {drawerOpen && (
+          <div className="lg:hidden fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} />
+            <div
+              id="saved-terms-drawer"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Saved Terms"
+              className="drawer-enter absolute inset-y-0 left-0 w-[min(85vw,20rem)] flex flex-col bg-[var(--color-background)]"
+            >
+              <SavedTermsPanel
+                variant="drawer"
+                expanded
+                onToggle={() => setDrawerOpen(false)}
+                collections={collections}
+                activeCollectionId={activeCollectionId}
+                onNewTerm={handleNewTerm}
+                onLoad={handlePredictCollection}
+                onDelete={handleDeleteCollection}
+              />
             </div>
-          )}
-        </aside>
-      </div>
+          </div>
+        )}
 
       <div className="flex-1 min-w-0 flex flex-col gap-6 pb-8">
         <PersonalizationQuiz

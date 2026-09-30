@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { labelAlignClass, tooltipAlignClass, useDismissTooltipOnOutsidePointer } from "@/lib/chartTooltip";
 import type { GradeBin } from "@/lib/api";
 
 const WIDTH = 600;
@@ -22,6 +23,8 @@ export default function GradeDistributionChart({
   const accentColor = "var(--color-chart-accent)";
   const gradientId = useId();
   const [hovered, setHovered] = useState<number | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useDismissTooltipOnOutsidePointer(rootRef, hovered, setHovered);
   const total = distribution.reduce((sum, b) => sum + b.count, 0);
   const max = Math.max(1, ...distribution.map((b) => b.count));
   const n = distribution.length;
@@ -35,7 +38,7 @@ export default function GradeDistributionChart({
   const areaPath = `${linePath} L ${xFor(n - 1)} ${HEIGHT} L ${xFor(0)} ${HEIGHT} Z`;
 
   return (
-    <div className="mt-4">
+    <div ref={rootRef} className="@container mt-4">
       <p className="text-xs text-[var(--color-text-subtle)] mb-2">Grade distribution</p>
       <div className="min-h-[140px] flex gap-2">
         <div className="relative w-6 shrink-0">
@@ -75,23 +78,29 @@ export default function GradeDistributionChart({
           {/* Dots are plain HTML circles positioned by percentage, not SVG
               <circle> elements - the chart's viewBox is stretched non-uniformly
               (preserveAspectRatio="none") to fill the responsive width, which
-              would otherwise squash every <circle> into an ellipse. */}
+              would otherwise squash every <circle> into an ellipse. Buttons
+              so tap and keyboard focus open the tooltip too, not just hover. */}
           {distribution.map((b, i) => (
-            <div
+            <button
+              type="button"
               key={b.bin}
-              className="absolute -translate-x-1/2 -translate-y-1/2 p-1.5 cursor-pointer"
+              aria-label={`${b.bin}: ${b.count} students`}
+              className="tap-target absolute -translate-x-1/2 -translate-y-1/2 p-1.5 flex items-center justify-center cursor-pointer"
               style={{ left: `${(xFor(i) / WIDTH) * 100}%`, top: `${(yFor(b.count) / HEIGHT) * 100}%` }}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered((h) => (h === i ? null : h))}
+              onFocus={() => setHovered(i)}
+              onBlur={() => setHovered((h) => (h === i ? null : h))}
+              onClick={() => setHovered(i)}
             >
               <span
                 className={`block bg-[var(--color-chart-accent)] transition-transform ${hovered === i ? "w-3 h-3" : "w-2 h-2"}`}
               />
-            </div>
+            </button>
           ))}
           {hovered != null && (
             <div
-              className="absolute -translate-x-1/2 -translate-y-[calc(100%+10px)] bg-[var(--color-surface-raised)] border border-[var(--color-border-strong)] text-[var(--color-foreground)] text-xs px-3 py-2 whitespace-nowrap pointer-events-none z-10"
+              className={`absolute ${tooltipAlignClass((xFor(hovered) / WIDTH) * 100)} -translate-y-[calc(100%+10px)] bg-[var(--color-surface-raised)] border border-[var(--color-border-strong)] text-[var(--color-foreground)] text-xs px-3 py-2 whitespace-nowrap pointer-events-none z-10`}
               style={{
                 left: `${(xFor(hovered) / WIDTH) * 100}%`,
                 top: `${(yFor(distribution[hovered].count) / HEIGHT) * 100}%`,
@@ -106,9 +115,18 @@ export default function GradeDistributionChart({
           )}
         </div>
       </div>
-      <div className="flex justify-between mt-2 px-1 pl-8">
-        {distribution.map((b) => (
-          <span key={b.bin} className="text-[9px] text-[var(--color-text-subtle)]">
+      {/* Each label sits directly under its own point (ml-8 = the y-axis
+          column + gap above). 11 bin labels don't fit a phone-width chart,
+          so every other one drops out until there's room. */}
+      <div className="relative h-4 mt-2 ml-8">
+        {distribution.map((b, i) => (
+          <span
+            key={b.bin}
+            className={`absolute top-0 whitespace-nowrap text-[9px] text-[var(--color-text-subtle)] ${labelAlignClass(i, n)} ${
+              i % 2 === 1 ? "hidden @lg:inline" : ""
+            }`}
+            style={{ left: `${(xFor(i) / WIDTH) * 100}%` }}
+          >
             {b.bin}
           </span>
         ))}

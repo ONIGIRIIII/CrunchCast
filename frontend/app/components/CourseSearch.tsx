@@ -116,6 +116,8 @@ export default function CourseSearch({
   return (
     <div className="relative">
       <div className="flex items-center gap-2 border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] pl-4 pr-1.5 py-1.5 focus-within:outline focus-within:outline-2 focus-within:outline-[var(--color-chart-accent)] focus-within:-outline-offset-1 transition-colors">
+        {/* 16px (text-base) below sm - iOS Safari zooms the whole page in on
+            focus for any input under 16px, and it stays zoomed afterward. */}
         <input
           id="course-search"
           placeholder={placeholder}
@@ -133,7 +135,7 @@ export default function CourseSearch({
             if (e.key === "Enter" && canAdd) handleAdd();
           }}
           onBlur={() => setTimeout(() => setOpen(false), 150)} // let a click on a result register first
-          className="flex-1 min-w-0 bg-transparent px-1 py-1.5 text-sm disabled:opacity-40 focus:outline-none"
+          className="flex-1 min-w-0 self-stretch bg-transparent px-1 py-1.5 text-base sm:text-sm disabled:opacity-40 focus:outline-none"
           autoComplete="off"
         />
         <button
@@ -143,7 +145,7 @@ export default function CourseSearch({
           disabled={query.trim() !== "" && !canAdd}
           aria-label={query.trim() ? "Add course" : "Browse all courses"}
           title={query.trim() ? "Add course" : "Browse all courses"}
-          className="shrink-0 bg-[var(--color-chart-accent)] text-black w-9 h-9 flex items-center justify-center disabled:opacity-40 hover:opacity-85 transition-opacity"
+          className="tap-target shrink-0 bg-[var(--color-chart-accent)] text-black w-9 h-9 flex items-center justify-center disabled:opacity-40 hover:opacity-85 transition-opacity"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -169,7 +171,7 @@ export default function CourseSearch({
                   disabled={added}
                   onMouseDown={(e) => e.preventDefault()} // keep focus so onBlur doesn't beat the click
                   onClick={() => select(subject, course)}
-                  className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-[var(--color-hover-surface)] disabled:opacity-40 flex items-center justify-between"
+                  className="tap-target w-full text-left px-3.5 py-2.5 text-sm hover:bg-[var(--color-hover-surface)] disabled:opacity-40 flex items-center justify-between"
                 >
                   <span>
                     {subject} {course}

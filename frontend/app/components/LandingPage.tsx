@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ApiError, predictTerm, type CourseInput, type Weights } from "@/lib/api";
@@ -8,16 +8,21 @@ import { loadWeights } from "@/lib/weights";
 import { saveDraftTerm } from "@/lib/draftTerm";
 import { loadTheme, saveTheme, type Theme } from "@/lib/theme";
 import CourseSearch from "./CourseSearch";
-import MeshBackground from "./MeshBackground";
+import SignalCards from "./SignalCards";
+import ExampleCourses from "./ExampleCourses";
+import MethodCards from "./MethodCards";
+import Reveal from "./Reveal";
 
 // WebGL/rAF/ResizeObserver don't exist during Next's SSR pass, so the 3D
 // graph is loaded client-only - see CourseGraph.tsx's own top-of-file note.
 const CourseGraph = dynamic(() => import("./CourseGraph"), { ssr: false });
 
-// This page partially breaks from the dashboard's square-corner "terminal"
-// design system (see frontend/README.md's "Design system" section) - it's
-// the marketing surface, not the data tool, so it gets rounded cards/
-// shadows and generous whitespace instead of grid lines. It keeps the same
+// This page partially breaks from the dashboard's "terminal" design system
+// (see frontend/README.md's "Design system" section) - it's the marketing
+// surface, not the data tool, so it gets bordered cards, shadows and
+// generous whitespace instead of grid lines. Corners stay square like the
+// dashboard's, though - except the floating nav (link pill, theme/menu
+// buttons, mobile dropdown) and borderless dot markers. It keeps the same
 // Geist Mono typeface as the dashboard though (`.landing` in globals.css),
 // and still pulls every color from the shared CSS custom properties there
 // (so light/dark mode both work for free), reusing `--chart-accent` as its
@@ -56,86 +61,79 @@ const QUICK_ADD_COURSES: { subject: string; course: string }[] = [
   { subject: "PSYC", course: "101" },
 ];
 
-const SIGNALS: { icon: IconComponent; label: string; detail: string }[] = [
+// "The honest part" - what difficulty_score is built from and what it
+// can't tell you (README: "What it measures", "Known limitations").
+const SCORE_IS: { heading: string; tone: "is" | "isnt"; text: string }[] = [
   {
-    icon: IconBarChart,
-    label: "Grade impact",
-    detail: "How the average grade compares to other courses at the same level.",
+    heading: "What it is",
+    tone: "is",
+    text: "Past average grade, fail rate and grade spread, ranked against courses at the same level, with a confidence level on every score.",
   },
   {
-    icon: IconAlertTriangle,
-    label: "Fail risk",
-    detail: "Historical fail rate - how often students don't pass outright.",
-  },
-  {
-    icon: IconActivity,
-    label: "Grading unpredictability",
-    detail: "How much grades swing section-to-section and term-to-term.",
-  },
-  {
-    icon: IconUsers,
-    label: "Class size",
-    detail: "Larger sections tend to grade - and curve - differently than small ones.",
+    heading: "What it isn't",
+    tone: "isnt",
+    text: "A measure of workload, a rating of the teaching, or a forecast for this year's section. The data ends at 2016W.",
   },
 ];
 
-const METHOD_STEPS: { step: string; icon: IconComponent; title: string; detail: string }[] = [
+// README "Known limitations", one card each.
+const LIMITATIONS: { title: string; text: string }[] = [
   {
-    step: "01",
-    icon: IconLayers,
-    title: "Data",
-    detail:
-      "Trained only on UBC PAIR Reports through 2016W - the upstream source documents that 2017W+ data was altered, so it's excluded entirely. A separate, display-only pipeline extends the \"view by term\" history browser through 2025W, but build_features.py, train.py, and predict.py never read it.",
+    title: "It's a stand-in for difficulty",
+    text: "The score is built from past grade outcomes. It doesn't measure workload, time spent, or how good the teaching is.",
   },
   {
-    step: "02",
-    icon: IconCpu,
-    title: "Model",
-    detail:
-      "XGBoost with a chronological train/test split (train ≤ 2013W, test 2014W-2016W) to avoid leakage. Beats a plain historical-lookup baseline by 2.3% MAE - a modest, honest improvement, since most of the real signal in this proxy label is a course's own trailing history.",
+    title: "The data is a decade old",
+    text: "The predictor stops at 2016W. A course's instructors and content may have changed a lot since then.",
   },
   {
-    step: "03",
-    icon: IconSliders,
-    title: "Personalization",
-    detail:
-      "Not a second model. Your quiz answers become weights over the same four precomputed signals, combined with plain arithmetic at request time - a transparent re-weighting of real numbers, not new machine learning dressed up to look personalized.",
+    title: "Two time ranges, kept apart",
+    text: "The history browser covers 1996 to 2025, but the predictor only goes up to 2016W. The two are never mixed.",
+  },
+  {
+    title: "Instructor names aren't cleaned up",
+    text: "A name only matches if it's spelled exactly the same every term, so the model's instructor-history feature is missing for about 52% of rows.",
+  },
+  {
+    title: "Few past offerings, low confidence",
+    text: "Courses with only a few past offerings get a low-confidence label, and the app shows a warning next to their score.",
+  },
+  {
+    title: "Vancouver only",
+    text: "All three data sources only reliably cover UBC's Vancouver campus.",
   },
 ];
 
-const LIMITATIONS: string[] = [
-  "Proxy, not ground truth - it measures historical grade outcomes, not workload, time commitment, or teaching quality.",
-  "The predictor's data stops at 2016W - a course's staff and curriculum have had a decade to change since.",
-  "The history browser (1996-2025) intentionally uses a wider data window than the predictor - never silently blurred together.",
-  "Professor names aren't normalized - the model's professor-history feature has a ~52% NaN rate when a name string doesn't recur exactly.",
-  "Small offering counts mean low confidence - the API reports a confidence level per course, surfaced directly in the app.",
-  "UBC Vancouver only - all three underlying data sources only reliably cover the Vancouver campus.",
+const NAV_LINKS: { href: string; label: string }[] = [
+  { href: "#how-it-works", label: "How it works" },
+  { href: "#methodology", label: "Methodology" },
+  { href: "#faq", label: "FAQ" },
 ];
 
 const FAQ: { q: string; a: string }[] = [
   {
     q: "Is this a workload predictor?",
-    a: "No - explicitly not. difficulty_score is a percentile-ranked composite of a course's historical average grade, fail rate, and grade variance. A course can have a brutal weekly workload but generous grading (low score), or a light workload with a harsh curve (high score).",
+    a: "No. The score comes from a course's past average grade, fail rate and grade spread. A heavy course can still score low if it grades generously, and a light one can score high if it grades strictly.",
   },
   {
     q: "How far back does the data go?",
-    a: "The prediction model trains only on UBC PAIR Reports through 2016W. The separate \"view by term\" history browser goes further, covering 1996 through whatever's most recently available (currently 2025W) - but that wider window is display-only and never touches the model.",
+    a: "The predictor learns from UBC's PAIR reports up to 2016W. The history browser goes further, from 1996 to the latest available term (currently 2025W), but that newer data is only shown to you. The model never uses it.",
   },
   {
-    q: "How accurate is the model, really?",
-    a: "XGBoost gets a test MAE of 16.00 versus a 16.38 MAE historical-lookup baseline - a modest 2.3% improvement. That's expected: most of the real signal in this proxy label is a course's own trailing history, so a much bigger jump would be more suspicious than reassuring.",
+    q: "How accurate is it?",
+    a: "On terms it hadn't seen, the model's average error was 16.00 points, against 16.38 for simply looking up each course's own history. That's about 2.3% better. A small gain is expected, since a course's past grades already explain most of its score.",
   },
   {
     q: "Do I need an account?",
-    a: "No sign-up, ever. Build a term, get your scores, and - if you want - save the collection in your browser's local storage for next time.",
+    a: "No. You can build a term and get scores without signing up. If you save a term, it's kept in your browser, not on a server.",
   },
   {
     q: "Why does a course show a low-confidence warning?",
-    a: "Some courses have very few historical offerings, or were introduced after 2016W, so the predictor falls back to subject/global estimates instead of the course's own history. Every prediction reports a confidence level, and the app surfaces a warning banner instead of presenting every score with equal certainty.",
+    a: "It has only a few past offerings, or it was first offered after 2016W. The predictor then falls back on estimates for the whole subject or for all courses, so the app flags the score as less reliable.",
   },
   {
     q: "Is this affiliated with UBC?",
-    a: "No. This is an independent portfolio project built on publicly available UBC PAIR Reports and Tableau dashboard data - not an official UBC tool, and not a teaching-quality rating.",
+    a: "No. It's an independent portfolio project built on publicly available UBC grade data. It isn't an official UBC tool or a rating of instructors.",
   },
 ];
 
@@ -148,6 +146,25 @@ export default function LandingPage() {
   const [navScrolled, setNavScrolled] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [theme, setTheme] = useState<Theme>("dark");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    // Mobile nav dropdown closes on Escape or any tap outside the header.
+    if (!menuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!headerRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     // Deferred to an effect (not read during initial render) so server and
@@ -210,60 +227,68 @@ export default function LandingPage() {
 
   return (
     <div className="landing min-h-screen flex flex-col">
-      {/* ---- Sitewide ambient background ---------------------------------
-          The dot-network + accent glow that used to live only behind the
-          hero now sits fixed behind the entire page (nav through footer),
-          pinned to the viewport rather than scrolling with content. The
-          hero section below draws its own solid background on top of it
-          (it gets the 3D course graph instead), and every section after
-          the hero uses a translucent background so this shows through the
-          gaps between cards. */}
-      <div className="fixed inset-0 -z-20 overflow-hidden bg-[var(--color-background)]">
-        <MeshBackground className="absolute inset-0" />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 950px 260px at 50% 0%, color-mix(in srgb, var(--color-chart-accent) 22%, transparent), transparent 70%)",
-          }}
-        />
-      </div>
-
       {/* ---- Nav --------------------------------------------------------
           No logo, no button, no bar over the hero - just the three link
           names floating over the page. Fixed (not sticky-in-flow) so it
           overlays the hero instead of taking up layout space; every anchor
           target below has its own pt/scroll-mt sized to this row's actual
-          height (~68px: py-6 + a text-sm line) to clear it. Past the hero,
+          height (~68px, see below) to clear it. Past the hero,
           the row itself grows a "liquid glass" pill (blur + translucency +
           rim light) driven by `navScrolled`, both so the links stay
           legible over whatever section is scrolling underneath and so
-          scrolling reads as picking the nav up off the page. */}
-      <header className="fixed top-0 inset-x-0 z-40">
-        <div className="max-w-6xl mx-auto flex items-center justify-center px-4 sm:px-6 lg:px-10 py-6">
+          scrolling reads as picking the nav up off the page.
+
+          Below sm the three links don't fit on one line next to the theme
+          toggle, so they collapse behind a hamburger button into a small
+          glass dropdown instead. The link pill and both buttons share one 44px
+          height (also the touch-target size), so py-3 keeps the row at ~68px
+          below md and md:py-5 at ~84px above it. */}
+      <header ref={headerRef} className="fixed top-0 inset-x-0 z-40">
+        <div className="max-w-6xl mx-auto flex items-center justify-end sm:justify-center gap-2 sm:gap-0 px-gutter py-3 md:py-5">
           <nav
-            className={`flex items-center flex-wrap justify-center gap-x-8 gap-y-2 rounded-full border transition-all duration-300 ease-out ${
+            aria-label="Primary"
+            className={`hidden sm:flex h-11 items-center justify-center gap-x-8 rounded-full border transition-all duration-300 ease-out ${
               navScrolled
-                ? "px-6 py-2.5 border-[var(--color-border-strong)]/50 bg-[var(--color-surface)]/60 shadow-lg shadow-black/10 backdrop-blur-xl backdrop-saturate-150"
-                : "px-0 py-0 border-transparent"
+                ? "px-6 border-[var(--color-border-strong)]/50 bg-[var(--color-surface)]/60 shadow-lg shadow-black/10 backdrop-blur-xl backdrop-saturate-150"
+                : "px-0 border-transparent"
             }`}
           >
-            <a href="#how-it-works" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-foreground)] transition-colors">
-              How it works
-            </a>
-            <a href="#methodology" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-foreground)] transition-colors">
-              Methodology
-            </a>
-            <a href="#faq" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-foreground)] transition-colors">
-              FAQ
-            </a>
+            {NAV_LINKS.map(({ href, label }) => (
+              <a
+                key={href}
+                href={href}
+                className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-foreground)] transition-colors"
+              >
+                {label}
+              </a>
+            ))}
           </nav>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            aria-controls="landing-mobile-nav"
+            className={`sm:hidden shrink-0 rounded-full border w-11 h-11 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-foreground)] transition-all duration-300 ease-out ${
+              navScrolled || menuOpen
+                ? "border-[var(--color-border-strong)]/50 bg-[var(--color-surface)]/60 shadow-lg shadow-black/10 backdrop-blur-xl backdrop-saturate-150"
+                : "border-transparent"
+            }`}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              {menuOpen ? (
+                <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              ) : (
+                <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              )}
+            </svg>
+          </button>
           <button
             type="button"
             onClick={toggleTheme}
             aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            className={`ml-4 shrink-0 rounded-full border w-8 h-8 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-foreground)] transition-all duration-300 ease-out ${
+            className={`sm:ml-4 shrink-0 rounded-full border w-11 h-11 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-foreground)] transition-all duration-300 ease-out ${
               navScrolled
                 ? "border-[var(--color-border-strong)]/50 bg-[var(--color-surface)]/60 shadow-lg shadow-black/10 backdrop-blur-xl backdrop-saturate-150"
                 : "border-transparent hover:border-[var(--color-border-strong)]/50"
@@ -291,6 +316,24 @@ export default function LandingPage() {
             )}
           </button>
         </div>
+        {menuOpen && (
+          <nav
+            id="landing-mobile-nav"
+            aria-label="Primary"
+            className="sm:hidden absolute top-full right-gutter -mt-1 w-56 max-w-[calc(100vw-2rem)] flex flex-col p-1.5 rounded-2xl border border-[var(--color-border-strong)]/50 bg-[var(--color-surface)]/80 shadow-lg shadow-black/10 backdrop-blur-xl backdrop-saturate-150"
+          >
+            {NAV_LINKS.map(({ href, label }) => (
+              <a
+                key={href}
+                href={href}
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center min-h-11 px-4 rounded-xl text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-hover-surface)] transition-colors"
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+        )}
       </header>
 
       <main className="flex-1 flex flex-col">
@@ -305,57 +348,65 @@ export default function LandingPage() {
             comment) to clear it. Two columns at lg+: copy/picker on the
             left, an interactive 3D course graph on the right (hidden below
             lg - dragging to orbit it would otherwise fight touch-scroll on
-            phones/small tablets). Opaque background so the sitewide mesh
-            layer behind the whole page doesn't show through here - this
-            section gets its own dedicated visual instead. */}
-        <section className="relative isolate overflow-hidden min-h-[100svh] flex flex-col bg-[var(--color-background)]">
-          {/* The sitewide glow above sits behind this section's own opaque
-              background and never shows through it - repeat it locally,
-              behind the hero's content but above its solid bg, so the top
-              of the hero itself gets the orange hue too. */}
-          <div
-            className="absolute inset-0 -z-10"
-            style={{
-              background:
-                "radial-gradient(ellipse 950px 260px at 50% 0%, color-mix(in srgb, var(--color-chart-accent) 22%, transparent), transparent 70%)",
-            }}
-            aria-hidden="true"
-          />
-          <div className="flex-1 w-full flex flex-col items-center justify-center px-4 sm:px-6 lg:px-10 pt-[68px] pb-6 sm:pb-8">
-          <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-stretch gap-12 lg:gap-24 xl:gap-32">
-            <div className="w-full lg:w-[50%] flex flex-col items-start text-left">
+            phones/small tablets). Plain page background, like every
+            section below it - the only decoration is the accent glow at the
+            top. */}
+        <section
+          className="landing-glow overflow-hidden min-h-[100svh] flex flex-col bg-[var(--color-background)]"
+          style={{ "--glow-strength": "22%" } as CSSProperties}
+        >
+          <div className="flex-1 w-full flex flex-col items-center justify-center px-gutter pt-[68px] pb-6 sm:pb-8">
+          <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-stretch gap-12 lg:gap-hero">
+            <div className="w-full min-w-0 lg:w-[50%] flex flex-col items-start text-left">
               {/* CrunchCast is the actual hero here - the brand name, not
                   the tagline, gets the big display treatment and the <h1>,
-                  with the tagline below demoted to a small supporting line. */}
+                  with the tagline below demoted to a small supporting line.
+                  Both sizes are fluid (see --text-display* in globals.css)
+                  so they fit a 320px phone and never run past this half of
+                  the row into the graph at laptop widths. */}
               <h1
-                className="landing-rise-in text-6xl sm:text-7xl lg:text-8xl font-black tracking-tight leading-none"
+                className="landing-rise-in text-display lg:text-display-lg font-black tracking-tight"
                 style={{ animationDelay: "40ms" }}
               >
                 Crunch<span style={{ color: "var(--color-chart-accent)" }}>Cast</span>
               </h1>
 
-              <p
-                className="landing-rise-in mt-6 whitespace-nowrap text-sm sm:text-base lg:text-lg font-bold tracking-tight text-[var(--color-text-muted)] leading-snug"
-                style={{ animationDelay: "60ms" }}
-              >
-                Know how a course <span style={{ color: "var(--color-chart-accent)" }}>actually grades</span> before
-                you register.
-              </p>
+              {/* w-fit sizes this box to the tagline's own (one-line from sm
+                  up) width; the paragraph's w-0 min-w-full then fills exactly
+                  that width without widening it, so the two always end at
+                  the same edge whatever the tagline's fluid font size. */}
+              <div className="w-fit max-w-full">
+                <p
+                  className="landing-rise-in mt-6 sm:whitespace-nowrap text-sm sm:text-base lg:text-tagline-lg font-bold tracking-tight text-[var(--color-text-muted)] leading-snug"
+                  style={{ animationDelay: "60ms" }}
+                >
+                  Know how a course <span style={{ color: "var(--color-chart-accent)" }}>actually grades</span> before
+                  you register.
+                </p>
 
-              <p
-                className="landing-rise-in mt-3 max-w-lg text-sm text-[var(--color-text-subtle)] leading-relaxed"
-                style={{ animationDelay: "80ms" }}
-              >
-                CrunchCast scores every UBC course&apos;s historical difficulty from decades of
-                real grade data - fail rates, grade spread, class size, the works. Not a workload
-                guess.
-              </p>
+                <p
+                  className="landing-rise-in mt-3 w-0 min-w-full text-sm text-[var(--color-text-subtle)] leading-relaxed"
+                  style={{ animationDelay: "80ms" }}
+                >
+                  CrunchCast scores every UBC course&apos;s historical difficulty from decades of
+                  real grade data - fail rates, grade spread, class size, the works. Not a workload
+                  guess.
+                </p>
+              </div>
 
               <div
                 id="picker"
-                className="landing-rise-in scroll-mt-[84px] w-full max-w-xl mt-8"
+                className="landing-rise-in scroll-mt-[84px] w-full max-w-xl mt-8 mb-[4.5rem] lg:mb-8"
                 style={{ animationDelay: "180ms" }}
               >
+                {/* mb reserves room for the out-of-flow added-courses tray
+                    (see below) so the stat ticker can't slide up under it.
+                    Below lg that's the tray's full height; at lg+ the
+                    taller graph column beside this one already covers
+                    most of it, except near 1024px where the headline has
+                    shrunk (so a smaller mb covers the rest without
+                    changing wider layouts, where the graph column is the
+                    taller one). */}
                 <p
                   className="landing-mono text-[11px] font-bold uppercase tracking-wider mb-3 text-left"
                   style={{ color: "var(--color-chart-accent)" }}
@@ -380,7 +431,7 @@ export default function LandingPage() {
                   <button
                     onClick={handlePredict}
                     disabled={courses.length === 0 || loading}
-                    className="shrink-0 flex items-center justify-center gap-2 rounded-lg bg-accent text-on-accent px-6 py-2.5 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
+                    className="tap-target shrink-0 flex items-center justify-center gap-2 bg-accent text-on-accent px-6 py-2.5 text-sm font-bold disabled:opacity-40 hover:opacity-85 transition-opacity"
                   >
                     {loading ? (
                       "Predicting..."
@@ -407,7 +458,7 @@ export default function LandingPage() {
                         onClick={() => addCourseIfNew(subject, course)}
                         disabled={added || atCap}
                         title={!added && atCap ? `Max ${MAX_COURSES} courses` : undefined}
-                        className="rounded-lg border border-[var(--color-border)] px-2.5 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-foreground)] disabled:opacity-30 disabled:hover:border-[var(--color-border)] transition-colors"
+                        className="tap-target border border-[var(--color-border)] px-2.5 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-foreground)] disabled:opacity-30 disabled:hover:border-[var(--color-border)] transition-colors"
                       >
                         {subject} {course}
                       </button>
@@ -435,7 +486,7 @@ export default function LandingPage() {
                         onClick={() => removeCourse(index)}
                         aria-label={`Remove ${c.subject} ${c.course}`}
                         title={`Remove ${c.subject} ${c.course}`}
-                        className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] px-2.5 py-1 text-xs font-medium text-[var(--color-foreground)] hover:border-severity-hard hover:text-severity-hard transition-colors"
+                        className="tap-target flex items-center gap-1.5 border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] px-2.5 py-1 text-xs font-medium text-[var(--color-foreground)] hover:border-severity-hard hover:text-severity-hard transition-colors"
                       >
                         {c.subject} {c.course}
                         <span aria-hidden="true">&times;</span>
@@ -449,7 +500,7 @@ export default function LandingPage() {
                 </div>
 
                 {error && (
-                  <p className="rounded-lg border-l-2 border-severity-hard bg-severity-hard/5 pl-3 pr-3 py-1.5 mt-4 text-sm text-left text-[var(--color-foreground)]">
+                  <p className="border-l-2 border-severity-hard bg-severity-hard/5 pl-3 pr-3 py-1.5 mt-4 text-sm text-left text-[var(--color-foreground)]">
                     ! {error}
                   </p>
                 )}
@@ -467,8 +518,9 @@ export default function LandingPage() {
                   the picker's own height varies (the added-courses overlay
                   only appears once a course is picked), so this is a
                   reasonable middle ground, not a pixel-exact match in every
-                  state. */}
-              <div className="relative w-full h-[410px] xl:h-[490px]">
+                  state. Fluid between those two old fixed steps (410 at
+                  lg, 490 at xl) rather than jumping between them. */}
+              <div className="relative w-full h-[clamp(400px,32vw,490px)]">
                 <CourseGraph courses={courses} />
               </div>
               <p className="landing-mono mt-4 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[var(--color-text-subtle)]">
@@ -516,9 +568,13 @@ export default function LandingPage() {
           </div>
           </div>
 
+          {/* Hidden on phones and short viewports (landscape phones,
+              768/800px-tall laptops) - there the hero's own content already
+              reaches the bottom edge, and an absolutely positioned cue would
+              sit on top of the picker/ticker. */}
           <a
             href="#how-it-works"
-            className="landing-mono absolute inset-x-0 bottom-16 flex flex-col items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-subtle)] hover:text-[var(--color-foreground)] transition-colors"
+            className="landing-mono absolute inset-x-0 bottom-16 max-sm:hidden [@media(max-height:820px)]:hidden flex flex-col items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-subtle)] hover:text-[var(--color-foreground)] transition-colors"
           >
             Scroll
             <IconChevronDown className="landing-scroll-cue w-3.5 h-3.5" />
@@ -526,170 +582,163 @@ export default function LandingPage() {
         </section>
 
         {/* ---- How it works: four signals --------------------------------- */}
-        <section id="how-it-works" className="scroll-mt-[68px] bg-[var(--color-background)]/70">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-20 sm:py-28 border-b border-[var(--color-border)]">
+        <section
+          id="how-it-works"
+          className="landing-glow landing-divider scroll-mt-[68px] bg-[var(--color-background)]"
+          // Straight after the hero with no divider line, so the glow sits
+          // lower instead of starting at a hard edge - centered on, and tall
+          // enough to cover, the whole heading + subtitle block. Offset tracks
+          // the section's own top padding so it stays on the text at every
+          // width, and is always past the glow's ~210px fade radius, so it
+          // never reaches the top edge.
+          style={{ "--glow-offset": "calc(var(--spacing-section) + 120px)", "--glow-size": "1100px 300px" } as CSSProperties}
+        >
+          <div className="max-w-6xl mx-auto px-gutter py-section">
             <SectionHeading
               eyebrow="How it works"
-              title="Four real signals. Not a black box."
-              subtitle="Every score breaks down into the same four historical measurements, each with its own plain-English detail line - so you know exactly why a course scored the way it did, not just the number itself."
+              title="Four numbers behind every score"
+              subtitle="Each course is scored on four things taken from its past grade reports. Each one is ranked from 0 to 100 against courses at the same level, so a first-year course is only compared with other first-year courses. The app shows all four for every course you add, along with the raw figure behind each."
               centered
             />
-            <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {SIGNALS.map(({ icon: Icon, label, detail }) => (
-                <div
-                  key={label}
-                  className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-6 flex flex-col gap-4 hover:border-[var(--color-border-strong)] transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent text-on-accent">
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-sm mb-1.5">{label}</p>
-                    <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">{detail}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {/* 2x2 grid of wide cards, each with its own animated
+                illustration - see SignalCards.tsx. */}
+            <SignalCards />
           </div>
         </section>
 
         {/* ---- What it measures (and doesn't) ------------------------------ */}
-        <section id="what-it-measures" className="scroll-mt-[68px] bg-[var(--color-background)]/70">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-20 sm:py-28 border-b border-[var(--color-border)]">
+        <section id="what-it-measures" className="landing-glow landing-divider scroll-mt-[68px] bg-[var(--color-background)]">
+          <div className="max-w-6xl mx-auto px-gutter py-section">
             <SectionHeading
               eyebrow="The honest part"
-              title="A difficulty score. Not a workload score."
-              subtitle={
-                <>
-                  This is explicitly not a workload measurement. A course can have a heavy weekly
-                  workload but generous grading (low <code className="landing-mono text-[13px]">difficulty_score</code>),
-                  or a light workload but a harsh curve (high{" "}
-                  <code className="landing-mono text-[13px]">difficulty_score</code>).
-                </>
-              }
+              title="It measures grading, not workload"
+              subtitle="The score is built from how a course has graded in the past, so it can't tell you how much work the course takes. A course with a heavy weekly load and generous grading scores low. A light course with strict grading scores high."
               centered
             />
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-6 sm:p-7">
-                <p className="text-xs font-bold uppercase tracking-wider text-severity-easy mb-4">
-                  difficulty_score IS
-                </p>
-                <ul className="flex flex-col gap-3.5">
-                  {[
-                    "A percentile-ranked composite of a course offering's historical average grade, fail rate, and grade variance.",
-                    "Ranked within its own course level (100/200/.../600), not across the whole catalog.",
-                    "Backed by real historical grade outcomes, with a confidence level attached to every prediction.",
-                  ].map((line) => (
-                    <li key={line} className="flex items-start gap-2.5 text-sm text-[var(--color-text-muted)]">
-                      <IconCheck className="w-4 h-4 mt-0.5 shrink-0 text-severity-easy" />
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-6 sm:p-7">
-                <p className="text-xs font-bold uppercase tracking-wider text-severity-hard mb-4">
-                  difficulty_score is NOT
-                </p>
-                <ul className="flex flex-col gap-3.5">
-                  {[
-                    "A workload, time-commitment, or effort measurement of any kind.",
-                    "A teaching-quality rating - self-selection and exam difficulty confound every historical number here.",
-                    "A forecast of this specific offering - the predictor's data stops at 2016W.",
-                  ].map((line) => (
-                    <li key={line} className="flex items-start gap-2.5 text-sm text-[var(--color-text-muted)]">
-                      <IconX className="w-4 h-4 mt-0.5 shrink-0 text-severity-hard" />
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {/* The workload example as two made-up courses scored with the
+                dashboard's own gauge (ExampleCourses.tsx), then a short
+                "is / isn't" strip. */}
+            <div className="mt-12">
+              <ExampleCourses />
             </div>
+            <Reveal className="mt-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 border border-[var(--color-border)] bg-[var(--color-surface-raised)] divide-y md:divide-y-0 md:divide-x divide-[var(--color-border)]">
+                {SCORE_IS.map(({ heading, tone, text }) => (
+                  <div key={heading} className="flex items-start gap-3 p-6 sm:p-7">
+                    {tone === "is" ? (
+                      <IconCheck className="w-4 h-4 mt-0.5 shrink-0 text-severity-easy" />
+                    ) : (
+                      <IconX className="w-4 h-4 mt-0.5 shrink-0 text-severity-hard" />
+                    )}
+                    <div>
+                      <p className={`font-bold text-sm mb-1 ${tone === "is" ? "text-severity-easy" : "text-severity-hard"}`}>
+                        {heading}
+                      </p>
+                      <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">{text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
           </div>
         </section>
 
         {/* ---- Under the hood: data / model / personalization -------------- */}
-        <section id="methodology" className="scroll-mt-[68px] bg-[var(--color-background)]/70">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-20 sm:py-28 border-b border-[var(--color-border)]">
+        <section id="methodology" className="landing-glow landing-divider scroll-mt-[68px] bg-[var(--color-background)]">
+          <div className="max-w-6xl mx-auto px-gutter py-section">
             <SectionHeading
               eyebrow="Under the hood"
-              title="Built like a real model, not a lookup table in disguise."
-              subtitle="Three steps, each documented in the repo rather than left as a black box."
+              title="How the model is built"
+              subtitle="Three parts, each written up in the repo: the data it learns from, the model itself, and how your quiz answers change the score."
               centered
             />
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-5">
-              {METHOD_STEPS.map(({ step, icon: Icon, title, detail }) => (
-                <div key={step} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-6 sm:p-7 flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <span className="landing-mono text-xs font-bold text-[var(--color-text-subtle)]">{step}</span>
-                    <Icon className="w-5 h-5 text-[var(--color-text-subtle)]" />
-                  </div>
-                  <p className="font-bold text-base">{title}</p>
-                  <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">{detail}</p>
-                </div>
-              ))}
-            </div>
+            {/* One card per part, each with a small animated visual built
+                from the README's real numbers - see MethodCards.tsx. */}
+            <MethodCards />
           </div>
         </section>
 
         {/* ---- Known limitations ------------------------------------------- */}
-        <section className="bg-[var(--color-background)]/70">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-20 sm:py-28 border-b border-[var(--color-border)]">
+        <section className="landing-glow landing-divider bg-[var(--color-background)]">
+          <div className="max-w-6xl mx-auto px-gutter py-section">
             <SectionHeading
               eyebrow="Known limitations"
-              title="Read this before you trust a score."
-              subtitle="Candid documentation of what the model does and doesn't measure matters as much as the app working - every one of these is called out again in the app itself, not just here."
+              title="Read this before you trust a score"
+              subtitle="What the model can't tell you, and where the data falls short."
               centered
             />
-            <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {LIMITATIONS.map((line) => (
-                <div
-                  key={line}
-                  className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-5 py-4 flex items-start gap-3"
-                >
-                  <IconInfo className="w-4 h-4 mt-0.5 shrink-0 text-[var(--color-text-subtle)]" />
-                  <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">{line}</p>
-                </div>
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {LIMITATIONS.map(({ title, text }, index) => (
+                <Reveal key={title} delay={(index % 3) * 100} className="flex">
+                  <div className="flex-1 flex flex-col gap-3 border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-6 hover:border-[var(--color-border-strong)] transition-colors">
+                    <span className="landing-mono text-xs font-bold" style={{ color: "var(--color-chart-accent)" }}>
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <h3 className="font-bold text-base">{title}</h3>
+                    <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">{text}</p>
+                  </div>
+                </Reveal>
               ))}
             </div>
           </div>
         </section>
 
         {/* ---- FAQ ---------------------------------------------------------- */}
-        <section id="faq" className="scroll-mt-[68px] bg-[var(--color-background)]/70">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-10 py-20 sm:py-28">
-            <SectionHeading eyebrow="FAQ" title="Questions worth asking before you trust a score." centered />
-            <div className="mt-10 flex flex-col divide-y divide-[var(--color-border)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] overflow-hidden">
+        <section id="faq" className="landing-glow scroll-mt-[68px] bg-[var(--color-background)]">
+          <div className="max-w-3xl mx-auto px-gutter py-section">
+            <SectionHeading eyebrow="FAQ" title="Common questions" centered />
+            {/* Separate cards rather than one divided box, so the open one can
+                stand out with an accent border and number. */}
+            <div className="mt-10 flex flex-col gap-3">
               {FAQ.map(({ q, a }, index) => {
                 const open = openFaq === index;
                 return (
-                  <div key={q} className="px-5 sm:px-6">
-                    <button
-                      type="button"
-                      onClick={() => setOpenFaq(open ? null : index)}
-                      aria-expanded={open}
-                      className="w-full flex items-center justify-between gap-4 py-5 cursor-pointer select-none text-left"
-                    >
-                      <span className="font-bold text-sm sm:text-base">{q}</span>
-                      <IconChevronDown
-                        className={`w-4 h-4 shrink-0 text-[var(--color-text-subtle)] transition-transform duration-300 ease-out ${
-                          open ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-                    {/* grid-rows 0fr/1fr trick - animates to the content's real
-                        height without measuring it in JS, since height/auto
-                        can't be transitioned directly. */}
+                  <Reveal key={q} delay={index * 60}>
                     <div
-                      className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-                        open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                      className={`border bg-[var(--color-surface-raised)] px-5 sm:px-6 transition-colors duration-300 ${
+                        open
+                          ? "border-[var(--color-chart-accent)]/50"
+                          : "border-[var(--color-border)] hover:border-[var(--color-border-strong)]"
                       }`}
                     >
-                      <div className="overflow-hidden">
-                        <p className="text-sm text-[var(--color-text-muted)] leading-relaxed pb-5 -mt-1">{a}</p>
+                      <button
+                        type="button"
+                        onClick={() => setOpenFaq(open ? null : index)}
+                        aria-expanded={open}
+                        className="w-full flex items-center gap-4 py-5 cursor-pointer select-none text-left"
+                      >
+                        <span
+                          className="landing-mono w-6 shrink-0 text-xs font-bold transition-colors duration-300"
+                          style={{ color: open ? "var(--color-chart-accent)" : "var(--color-text-subtle)" }}
+                        >
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <span className="flex-1 font-bold text-sm sm:text-base">{q}</span>
+                        <span
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center border transition-[rotate,border-color,color] duration-300 ease-out ${
+                            open
+                              ? "rotate-45 border-[var(--color-chart-accent)]/50 text-[var(--color-chart-accent)]"
+                              : "border-[var(--color-border-strong)] text-[var(--color-text-subtle)]"
+                          }`}
+                          aria-hidden="true"
+                        >
+                          <IconPlus className="w-3.5 h-3.5" />
+                        </span>
+                      </button>
+                      {/* grid-rows 0fr/1fr trick - animates to the content's real
+                          height without measuring it in JS, since height/auto
+                          can't be transitioned directly. */}
+                      <div
+                        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+                          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                        }`}
+                      >
+                        <div className="overflow-hidden">
+                          <p className="text-sm text-[var(--color-text-muted)] leading-relaxed pb-5 -mt-1 pl-10 sm:pr-11">{a}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </Reveal>
                 );
               })}
             </div>
@@ -700,7 +749,7 @@ export default function LandingPage() {
 
       {/* ---- Footer ----------------------------------------------------- */}
       <footer className="border-t border-[var(--color-border)] bg-[var(--color-surface)]/90">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-12 flex flex-col sm:flex-row sm:items-start justify-between gap-8">
+        <div className="max-w-6xl mx-auto px-gutter py-12 flex flex-col sm:flex-row sm:items-start justify-between gap-8">
           <div className="max-w-sm">
             <div className="flex items-center gap-2 mb-3">
               {/* Same nested-semicircle mark as the dashboard's own nav icon
@@ -732,14 +781,14 @@ export default function LandingPage() {
             <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-text-subtle)]">Built by</p>
             <p className="font-bold text-sm mb-3">Harshpreet Singh</p>
             <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-text-subtle)] mb-2.5">Links</p>
-            <nav className="flex items-center gap-4">
+            <nav className="flex items-center gap-1 md:gap-4 max-md:-mx-3">
               <a
                 href="https://github.com/ONIGIRIIII/CrunchCast"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="GitHub"
                 title="GitHub"
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-chart-accent)] transition-colors"
+                className="tap-target flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-chart-accent)] transition-colors"
               >
                 <IconGithub className="w-5 h-5" />
               </a>
@@ -747,7 +796,7 @@ export default function LandingPage() {
                 href="mailto:singhharshpreet675@gmail.com"
                 aria-label="Email"
                 title="Email"
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-chart-accent)] transition-colors"
+                className="tap-target flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-chart-accent)] transition-colors"
               >
                 <IconEmail className="w-5 h-5" />
               </a>
@@ -757,7 +806,7 @@ export default function LandingPage() {
                 rel="noopener noreferrer"
                 aria-label="LinkedIn"
                 title="LinkedIn"
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-chart-accent)] transition-colors"
+                className="tap-target flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-chart-accent)] transition-colors"
               >
                 <IconLinkedIn className="w-5 h-5" />
               </a>
@@ -790,7 +839,7 @@ function SectionHeading({
       >
         {eyebrow}
       </p>
-      <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">{title}</h2>
+      <h2 className="text-h2 font-black tracking-tight leading-tight">{title}</h2>
       {subtitle && <p className="text-sm sm:text-base text-[var(--color-text-muted)] leading-relaxed">{subtitle}</p>}
     </div>
   );
@@ -800,8 +849,6 @@ function SectionHeading({
 // Minimal hand-drawn SVGs (no icon library dependency, matching the
 // stroke-based convention the header logomark already used) - each takes
 // only a `className` for sizing/color so callers stay terse above.
-
-type IconComponent = (props: { className?: string }) => ReactElement;
 
 function IconGithub({ className }: { className?: string }) {
   return (
@@ -828,72 +875,6 @@ function IconLinkedIn({ className }: { className?: string }) {
   );
 }
 
-function IconBarChart({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <path d="M4 20V11M12 20V4M20 20V15" />
-    </svg>
-  );
-}
-
-function IconAlertTriangle({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M10.6 3.9 2.4 19a1.6 1.6 0 0 0 1.4 2.4h16.4a1.6 1.6 0 0 0 1.4-2.4L13.4 3.9a1.6 1.6 0 0 0-2.8 0Z" />
-      <path d="M12 9.5v4.2" />
-      <path d="M12 17.2h.01" />
-    </svg>
-  );
-}
-
-function IconActivity({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 12h4l2.5-7 4 14 2.5-7H22" />
-    </svg>
-  );
-}
-
-function IconUsers({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="9" cy="8.5" r="3.3" />
-      <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
-      <path d="M15.5 3.6a3.3 3.3 0 0 1 0 6.4" />
-      <path d="M17 14.2c2.3.6 4 2.8 4 5.8" />
-    </svg>
-  );
-}
-
-function IconLayers({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 2 2 8l10 6 10-6-10-6Z" />
-      <path d="M2 14l10 6 10-6" />
-    </svg>
-  );
-}
-
-function IconCpu({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="6" y="6" width="12" height="12" rx="2" />
-      <path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" />
-    </svg>
-  );
-}
-
-function IconSliders({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h13M21 18h0" />
-      <circle cx="15" cy="6" r="2" fill="var(--color-surface-raised)" />
-      <circle cx="7" cy="12" r="2" fill="var(--color-surface-raised)" />
-      <circle cx="17" cy="18" r="2" fill="var(--color-surface-raised)" />
-    </svg>
-  );
-}
-
 function IconCheck({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -910,12 +891,10 @@ function IconX({ className }: { className?: string }) {
   );
 }
 
-function IconInfo({ className }: { className?: string }) {
+function IconPlus({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 11v5.5" />
-      <path d="M12 7.8h.01" />
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
     </svg>
   );
 }
